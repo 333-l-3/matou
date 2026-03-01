@@ -1,0 +1,11 @@
+# time_sec,zombie_id,row,start_x,count,interval_sec
+0.8,normal,2,980,1,0
+8.0,normal,1,980,2,2.2
+16.0,normal,3,980,2,2.0
+24.0,cone,-1,980,2,2.5
+34.0,bucket,2,985,1,0
+42.0,normal,-1,980,3,1.8
+52.0,cone,4,985,2,2.0
+62.0,screen,0,985,1,0
+72.0,bucket,-1,985,2,3.0
+84.0,football,2,990,1,0

@@ -1,0 +1,6 @@
+# id,name,hp,speed,attack,attack_interval
+normal,NormalZombie,270,13,100,1.00
+cone,ConeZombie,640,13,100,1.00
+bucket,BucketZombie,1370,13,100,1.00
+football,FootballZombie,1670,20,100,0.80
+screen,ScreenZombie,1100,12,100,1.00

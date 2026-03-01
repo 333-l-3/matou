@@ -1,0 +1,29 @@
+# Build output
+bin/
+out/
+build/
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+*.sln
+*.vcxproj*
+*.filters
+*.user
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Debug symbols / binaries
+*.obj
+*.o
+*.pdb
+*.ilk
+*.exe
+*.dll
+
+# Logs
+*.log

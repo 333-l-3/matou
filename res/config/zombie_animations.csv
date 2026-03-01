@@ -1,0 +1,6 @@
+# id,walk_gif,attack_gif,die_gif
+football,res\\images\\FootballZombieWalk.gif,res\\images\\FootballZombieAttack.gif,res\\images\\FootballZombieDie.gif
+normal,res\\images\\ZombieWalk1.gif,res\\images\\ZombieAttack.gif,res\\images\\ZombieDie.gif
+cone,res\\images\\ConeZombieWalk.gif,res\\images\\ConeZombieAttack.gif,res\\images\\ZombieDie.gif
+bucket,res\\images\\BucketZombieWalk.gif,res\\images\\BucketZombieAttack.gif,res\\images\\ZombieDie.gif
+screen,res\\images\\ScreenZombieWalk.gif,res\\images\\ScreenZombieAttack.gif,res\\images\\ZombieDie.gif

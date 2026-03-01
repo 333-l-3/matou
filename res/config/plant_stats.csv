@@ -1,0 +1,12 @@
+# id,name,sun_cost,hp,attack,attack_interval
+peashooter,Peashooter,100,300,20,1.40
+sunflower,Sunflower,50,300,0,0.00
+wallnut,WallNut,50,4000,0,0.00
+potatomine,PotatoMine,25,300,1800,0.00
+snowpea,SnowPea,175,300,20,1.40
+cherrybomb,CherryBomb,150,300,1800,0.00
+repeater,Repeater,200,300,40,1.40
+scaredyshroom,ScaredyShroom,25,200,20,1.50
+fume,BigMushroom,75,300,30,1.80
+chomper,Chomper,150,300,9999,4.00
+wsdr,Wsdr,800,600,120,1.20
