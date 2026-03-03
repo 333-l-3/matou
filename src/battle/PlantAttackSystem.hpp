@@ -15,6 +15,8 @@ struct BulletUnit {
     float x = 0.f;
     float speed = 0.f;
     int damage = 0;
+    float life = 4.0f;
+    float maxLife = 4.0f;
 };
 
 class PlantAttackSystem {
@@ -39,3 +41,4 @@ private:
 } // namespace matou::battle
 
 #endif
+

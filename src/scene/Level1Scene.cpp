@@ -171,12 +171,34 @@ void Level1Scene::onEnter() {
                 walkFrames.push_back(tex);
             }
             if (walkFrames.empty() && zdef.walkFallbackA && zdef.walkFallbackA[0] != '\0') {
-                auto t = rm->getTexture(matou::tool::file::resourcePath(zdef.walkFallbackA));
-                if (t) { t->setSmooth(false); walkFrames.push_back(t); }
+                const std::string gifAbs = matou::tool::file::resourcePath(zdef.walkFallbackA);
+                auto anim = rm->getGifAnimation(gifAbs);
+                if (anim && !anim->frames.empty()) {
+                    for (auto& f : anim->frames) {
+                        if (!f) continue;
+                        f->setSmooth(false);
+                        walkFrames.push_back(f);
+                    }
+                }
+                if (walkFrames.empty()) {
+                    auto tex = rm->getTexture(gifAbs);
+                    if (tex) { tex->setSmooth(false); walkFrames.push_back(tex); }
+                }
             }
             if (walkFrames.empty() && zdef.walkFallbackB && zdef.walkFallbackB[0] != '\0') {
-                auto t = rm->getTexture(matou::tool::file::resourcePath(zdef.walkFallbackB));
-                if (t) { t->setSmooth(false); walkFrames.push_back(t); }
+                const std::string gifAbs = matou::tool::file::resourcePath(zdef.walkFallbackB);
+                auto anim = rm->getGifAnimation(gifAbs);
+                if (anim && !anim->frames.empty()) {
+                    for (auto& f : anim->frames) {
+                        if (!f) continue;
+                        f->setSmooth(false);
+                        walkFrames.push_back(f);
+                    }
+                }
+                if (walkFrames.empty()) {
+                    auto tex = rm->getTexture(gifAbs);
+                    if (tex) { tex->setSmooth(false); walkFrames.push_back(tex); }
+                }
             }
 
             auto& dieFrames = zombieDieFramesById[zdef.id];
@@ -192,8 +214,19 @@ void Level1Scene::onEnter() {
                 dieFrames.push_back(tex);
             }
             if (dieFrames.empty() && zdef.dieFallback && zdef.dieFallback[0] != '\0') {
-                auto t = rm->getTexture(matou::tool::file::resourcePath(zdef.dieFallback));
-                if (t) { t->setSmooth(false); dieFrames.push_back(t); }
+                const std::string gifAbs = matou::tool::file::resourcePath(zdef.dieFallback);
+                auto anim = rm->getGifAnimation(gifAbs);
+                if (anim && !anim->frames.empty()) {
+                    for (auto& f : anim->frames) {
+                        if (!f) continue;
+                        f->setSmooth(false);
+                        dieFrames.push_back(f);
+                    }
+                }
+                if (dieFrames.empty()) {
+                    auto tex = rm->getTexture(gifAbs);
+                    if (tex) { tex->setSmooth(false); dieFrames.push_back(tex); }
+                }
             }
         }
 
@@ -211,15 +244,31 @@ void Level1Scene::onEnter() {
                 frames.push_back(tex);
             }
             if (frames.empty() && pdef.fallbackStatic && pdef.fallbackStatic[0] != '\0') {
-                auto t = rm->getTexture(matou::tool::file::resourcePath(pdef.fallbackStatic));
-                if (t) { t->setSmooth(false); frames.push_back(t); }
+                const std::string gifAbs = matou::tool::file::resourcePath(pdef.fallbackStatic);
+                auto anim = rm->getGifAnimation(gifAbs);
+                if (anim && !anim->frames.empty()) {
+                    for (auto& f : anim->frames) {
+                        if (!f) continue;
+                        f->setSmooth(false);
+                        frames.push_back(f);
+                    }
+                }
+                if (frames.empty()) {
+                    auto tex = rm->getTexture(gifAbs);
+                    if (tex) { tex->setSmooth(false); frames.push_back(tex); }
+                }
             }
         }
 
-        bulletTexture = rm->getTexture(matou::tool::file::resourcePath("res\\images\\Pea.png"));
+        bulletTexture = rm->getTexture(matou::tool::file::resourcePath("res\\images\\Plants\\PB01.gif"));
         if (bulletTexture) bulletTexture->setSmooth(false);
-        bulletSnowTexture = rm->getTexture(matou::tool::file::resourcePath("res\\images\\PeaSnow.png"));
+        bulletSnowTexture = rm->getTexture(matou::tool::file::resourcePath("res\\images\\Plants\\SnowPea\\SnowPea.gif"));
         if (bulletSnowTexture) bulletSnowTexture->setSmooth(false);
+        bulletShroomTexture = rm->getTexture(matou::tool::file::resourcePath("res\\images\\Plants\\ScaredyShroom\\ShroomBullet.gif"));
+        if (!bulletShroomTexture) bulletShroomTexture = rm->getTexture(matou::tool::file::resourcePath("res\\images\\Plants\\ShroomBullet.gif"));
+        if (bulletShroomTexture) bulletShroomTexture->setSmooth(false);
+        bulletFumeTexture = rm->getTexture(matou::tool::file::resourcePath("res\\images\\Plants\\FumeShroom\\FumeShroomBullet.gif"));
+        if (bulletFumeTexture) bulletFumeTexture->setSmooth(false);
     }
 
     rebuildLayout(cachedViewSize);
@@ -447,18 +496,68 @@ void Level1Scene::render(sf::RenderTarget& target) {
         float bottomY = bottomL.y + (bottomR.y - bottomL.y) * t;
         float y = (topY + bottomY) * 0.5f;
 
-        std::shared_ptr<sf::Texture> btex = (b.sourcePlantId == "snowpea" && bulletSnowTexture) ? bulletSnowTexture : bulletTexture;
+        if (b.sourcePlantId == "fume") {
+            float sprayW = lawnCellW * 4.0f;
+            float sprayH = lawnCellH * 0.62f;
+
+            if (bulletFumeTexture) {
+                sf::Sprite fs;
+                fs.setTexture(*bulletFumeTexture);
+                auto tsz = bulletFumeTexture->getSize();
+                if (tsz.x > 0 && tsz.y > 0) {
+                    const int rowCount = 8;
+                    int rowH = static_cast<int>(tsz.y / rowCount);
+                    if (rowH <= 0) rowH = static_cast<int>(tsz.y);
+
+                    float lifeRatio = 0.f;
+                    if (b.maxLife > 0.0001f) {
+                        lifeRatio = 1.f - std::clamp(b.life / b.maxLife, 0.f, 1.f);
+                    }
+                    int rowIdx = std::clamp(static_cast<int>(lifeRatio * static_cast<float>(rowCount)), 0, rowCount - 1);
+
+                    fs.setTextureRect(sf::IntRect(0, rowIdx * rowH, static_cast<int>(tsz.x), rowH));
+                    float sxScale = sprayW / static_cast<float>(tsz.x);
+                    float syScale = sprayH / static_cast<float>(rowH);
+                    fs.setScale(sxScale, syScale);
+                    fs.setPosition(sx, y - sprayH * 0.5f);
+                    fs.setColor(sf::Color(255, 255, 255, 235));
+                    target.draw(fs);
+                }
+            } else {
+                sf::RectangleShape spray;
+                spray.setSize({sprayW, sprayH});
+                spray.setOrigin(0.f, sprayH * 0.5f);
+                spray.setPosition(sx, y);
+                spray.setFillColor(sf::Color(205, 175, 235, 180));
+                spray.setOutlineThickness(0.f);
+                target.draw(spray);
+            }
+            continue;
+        }
+
+        std::shared_ptr<sf::Texture> btex = bulletTexture;
+        float bulletSize = 24.f;
+        if (b.sourcePlantId == "snowpea" && bulletSnowTexture) {
+            btex = bulletSnowTexture;
+            bulletSize = 28.f;
+        } else if (b.sourcePlantId == "scaredyshroom" && bulletShroomTexture) {
+            btex = bulletShroomTexture;
+            bulletSize = 26.f;
+        } else if (b.sourcePlantId == "wsdr") {
+            bulletSize = 21.f;
+        }
+
         if (btex) {
             sf::Sprite bs;
             bs.setTexture(*btex);
             auto tsz = btex->getSize();
             if (tsz.x > 0 && tsz.y > 0) {
-                float s = 14.f / static_cast<float>(tsz.x);
+                float s = bulletSize / static_cast<float>(tsz.x);
                 bs.setScale(s, s);
                 float w = tsz.x * s;
                 float h = tsz.y * s;
                 bs.setPosition(sx - w * 0.5f, y - h * 0.5f);
-                if (b.sourcePlantId == "repeater") bs.setColor(sf::Color(180, 255, 180));
+                if (b.sourcePlantId == "repeater" || b.sourcePlantId == "wsdr") bs.setColor(sf::Color(180, 255, 180));
                 target.draw(bs);
             }
         }
@@ -730,4 +829,18 @@ void Level1Scene::handleEvent(const sf::Event& event) {
         rebuildLayout(cachedViewSize);
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

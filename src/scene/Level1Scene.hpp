@@ -71,6 +71,8 @@ private:
     std::unordered_map<std::string, std::vector<std::shared_ptr<sf::Texture>>> plantIdleFramesById;
     std::shared_ptr<sf::Texture> bulletTexture;
     std::shared_ptr<sf::Texture> bulletSnowTexture;
+    std::shared_ptr<sf::Texture> bulletShroomTexture;
+    std::shared_ptr<sf::Texture> bulletFumeTexture;
     std::unordered_map<std::string, float> zombieAnimTimeById;
     std::unordered_map<std::string, int> zombieAnimFrameById;
     std::unordered_map<std::string, float> plantAnimTimeById;
@@ -91,6 +93,12 @@ private:
 };
 
 #endif
+
+
+
+
+
+
 
 
 

@@ -2,9 +2,20 @@
 
 C++ game project using SFML.
 
-## GitHub setup
-1. git remote add origin <your-github-repo-url>
-2. git branch -M main
-3. git add .
-4. git commit -m "init"
-5. git push -u origin main
+## Version
+- Current release: v0.2
+- Release date: 2026-03-03
+
+## v0.2 Highlights
+- Replaced legacy assets with new Plants/Zombies resource sets.
+- Switched runtime animation loading to GIF-based pipelines for plants and zombies.
+- Updated plant attack/projectile behavior for new materials (including mushroom projectiles and fume spray effect).
+- Adapted card display and in-battle rendering to new sprite sources.
+
+## Build
+- Compiler: MinGW g++ (C++17)
+- Dependencies: SFML 2.6.2, GDI+
+- Output: `bin/debug/main.exe`
+
+## Repository
+- Remote: `https://github.com/333-l-3/matou.git`

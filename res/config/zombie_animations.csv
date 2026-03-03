@@ -1,6 +1,6 @@
 # id,walk_gif,attack_gif,die_gif
-football,res\\images\\FootballZombieWalk.gif,res\\images\\FootballZombieAttack.gif,res\\images\\FootballZombieDie.gif
-normal,res\\images\\ZombieWalk1.gif,res\\images\\ZombieAttack.gif,res\\images\\ZombieDie.gif
-cone,res\\images\\ConeZombieWalk.gif,res\\images\\ConeZombieAttack.gif,res\\images\\ZombieDie.gif
-bucket,res\\images\\BucketZombieWalk.gif,res\\images\\BucketZombieAttack.gif,res\\images\\ZombieDie.gif
-screen,res\\images\\ScreenZombieWalk.gif,res\\images\\ScreenZombieAttack.gif,res\\images\\ZombieDie.gif
+football,res\\images\\Zombies\\FootballZombie\\FootballZombie.gif,res\\images\\Zombies\\FootballZombie\\FootballZombieAttack.gif,res\\images\\Zombies\\FootballZombie\\Die.gif
+normal,res\\images\\Zombies\\Zombie\\Zombie.gif,res\\images\\Zombies\\Zombie\\ZombieAttack.gif,res\\images\\Zombies\\Zombie\\ZombieDie.gif
+cone,res\\images\\Zombies\\ConeheadZombie\\ConeheadZombie.gif,res\\images\\Zombies\\ConeheadZombie\\ConeheadZombieAttack.gif,res\\images\\Zombies\\Zombie\\ZombieDie.gif
+bucket,res\\images\\Zombies\\BucketheadZombie\\BucketheadZombie.gif,res\\images\\Zombies\\BucketheadZombie\\BucketheadZombieAttack.gif,res\\images\\Zombies\\Zombie\\ZombieDie.gif
+screen,res\\images\\Zombies\\ScreenDoorZombie\\ScreenDoorZombie.gif,res\\images\\Zombies\\ScreenDoorZombie\\ScreenDoorZombieAttack.gif,res\\images\\Zombies\\Zombie\\ZombieDie.gif

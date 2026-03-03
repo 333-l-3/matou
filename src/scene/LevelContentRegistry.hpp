@@ -41,17 +41,17 @@ struct PlantAnimDef {
 
 inline const std::vector<PlantCardDef>& allPlantCards() {
     static const std::vector<PlantCardDef> defs = {
-        {"peashooter", "Õ„∂π…‰ ÷", "res\\images\\Peashooter.png"},
-        {"sunflower", "œÚ»’ø˚", "res\\images\\SunFlower.png"},
-        {"wallnut", "º·π˚«Ω", "res\\images\\WallNut.png"},
-        {"potatomine", "Õ¡∂π¿◊", "res\\images\\PotatoMine.png"},
-        {"snowpea", "∫Æ±˘…‰ ÷", "res\\images\\SnowPea.png"},
-        {"cherrybomb", "”£Ã“’®µØ", "res\\images\\CherryBomb.png"},
-        {"repeater", "À´∑¢…‰ ÷", "res\\images\\Repeater.png"},
-        {"scaredyshroom", "µ®–°πΩ", "res\\images\\danxiaogu.png"},
-        {"fume", "µ®¥ÛπΩ", "res\\images\\dandagu.png"},
-        {"chomper", "¥Û◊Ïª®", "res\\images\\dazuihua.png"},
-        {"wsdr", "Œ¨ ≤¥˜∂˚", "res\\images\\wsdr.png"}
+        {"peashooter", "Õ„∂π…‰ ÷", "res\\images\\Plants\\Peashooter\\0.gif"},
+        {"sunflower", "œÚ»’ø˚", "res\\images\\Plants\\SunFlower\\0.gif"},
+        {"wallnut", "º·π˚«Ω", "res\\images\\Plants\\WallNut\\0.gif"},
+        {"potatomine", "Õ¡∂π¿◊", "res\\images\\Plants\\PotatoMine\\0.gif"},
+        {"snowpea", "∫Æ±˘…‰ ÷", "res\\images\\Plants\\SnowPea\\0.gif"},
+        {"cherrybomb", "”£Ã“’®µØ", "res\\images\\Plants\\CherryBomb\\0.gif"},
+        {"repeater", "À´∑¢…‰ ÷", "res\\images\\Plants\\Repeater\\0.gif"},
+        {"scaredyshroom", "µ®–°πΩ", "res\\images\\Plants\\ScaredyShroom\\0.gif"},
+        {"fume", "µ®¥ÛπΩ", "res\\images\\Plants\\FumeShroom\\0.gif"},
+        {"chomper", "¥Û◊Ïª®", "res\\images\\Plants\\Chomper\\0.gif"},
+        {"wsdr", "Œ¨ ≤¥˜∂˚", "res\\images\\Plants\\GatlingPea\\0.gif"}
     };
     return defs;
 }
@@ -71,24 +71,28 @@ inline const std::vector<ZombieSpawnDef>& initialZombieSpawns() {
 
 inline const std::vector<ZombieAnimDef>& zombieAnimDefs() {
     static const std::vector<ZombieAnimDef> defs = {
-        {"normal", "res\\images\\zombie_frames\\normal_walk_%02d.png", 64, 0.08f, "res\\images\\ZombieWalk1.gif", "res\\images\\ZombieWalk2.gif", "res\\images\\zombie_frames\\normal_die_%02d.png", 64, "res\\images\\ZombieDie.gif"},
-        {"cone", "res\\images\\zombie_frames\\cone_walk_%02d.png", 64, 0.08f, "res\\images\\ConeZombieWalk.gif", "res\\images\\ConeZombieAttack.gif", "res\\images\\zombie_frames\\normal_die_%02d.png", 64, "res\\images\\ZombieDie.gif"},
-        {"bucket", "res\\images\\zombie_frames\\bucket_walk_%02d.png", 64, 0.08f, "res\\images\\BucketZombieWalk.gif", "res\\images\\BucketZombieAttack.gif", "res\\images\\zombie_frames\\normal_die_%02d.png", 64, "res\\images\\ZombieDie.gif"},
-        {"football", "res\\images\\zombie_frames\\football_walk_%02d.png", 64, 0.08f, "res\\images\\FootballZombieWalk.gif", "res\\images\\FootballZombieAttack.gif", "res\\images\\zombie_frames\\football_die_%02d.png", 64, "res\\images\\FootballZombieDie.gif"},
-        {"screen", "res\\images\\zombie_frames\\screen_walk_%02d.png", 64, 0.08f, "res\\images\\ScreenZombieWalk.gif", "res\\images\\ScreenZombieAttack.gif", "res\\images\\zombie_frames\\normal_die_%02d.png", 64, "res\\images\\ZombieDie.gif"}
+        {"normal", "", 0, 0.09f, "res\\images\\Zombies\\Zombie\\Zombie.gif", "res\\images\\Zombies\\Zombie\\ZombieAttack.gif", "", 0, "res\\images\\Zombies\\Zombie\\ZombieDie.gif"},
+        {"cone", "", 0, 0.09f, "res\\images\\Zombies\\ConeheadZombie\\ConeheadZombie.gif", "res\\images\\Zombies\\ConeheadZombie\\ConeheadZombieAttack.gif", "", 0, "res\\images\\Zombies\\Zombie\\ZombieDie.gif"},
+        {"bucket", "", 0, 0.09f, "res\\images\\Zombies\\BucketheadZombie\\BucketheadZombie.gif", "res\\images\\Zombies\\BucketheadZombie\\BucketheadZombieAttack.gif", "", 0, "res\\images\\Zombies\\Zombie\\ZombieDie.gif"},
+        {"football", "", 0, 0.09f, "res\\images\\Zombies\\FootballZombie\\FootballZombie.gif", "res\\images\\Zombies\\FootballZombie\\FootballZombieAttack.gif", "", 0, "res\\images\\Zombies\\FootballZombie\\Die.gif"},
+        {"screen", "", 0, 0.09f, "res\\images\\Zombies\\ScreenDoorZombie\\ScreenDoorZombie.gif", "res\\images\\Zombies\\ScreenDoorZombie\\ScreenDoorZombieAttack.gif", "", 0, "res\\images\\Zombies\\Zombie\\ZombieDie.gif"}
     };
     return defs;
 }
 
 inline const std::vector<PlantAnimDef>& plantAnimDefs() {
     static const std::vector<PlantAnimDef> defs = {
-        {"peashooter", "res\\images\\plant_frames\\peashooter_idle_%02d.png", 64, 0.09f, "res\\images\\Peashooter.png"},
-        {"sunflower", "res\\images\\plant_frames\\sunflower_idle_%02d.png", 64, 0.08f, "res\\images\\SunFlower.png"},
-        {"wallnut", "res\\images\\plant_frames\\wallnut_idle_%02d.png", 64, 0.10f, "res\\images\\WallNut.png"},
-        {"potatomine", "res\\images\\plant_frames\\potatomine_idle_%02d.png", 64, 0.10f, "res\\images\\PotatoMine.png"},
-        {"snowpea", "res\\images\\plant_frames\\snowpea_idle_%02d.png", 64, 0.09f, "res\\images\\SnowPea.png"},
-        {"cherrybomb", "res\\images\\plant_frames\\cherrybomb_idle_%02d.png", 64, 0.08f, "res\\images\\CherryBomb.png"},
-        {"repeater", "res\\images\\plant_frames\\repeater_idle_%02d.png", 64, 0.09f, "res\\images\\Repeater.png"}
+        {"peashooter", "", 0, 0.11f, "res\\images\\Plants\\Peashooter\\Peashooter.gif"},
+        {"sunflower", "", 0, 0.11f, "res\\images\\Plants\\SunFlower\\SunFlower.gif"},
+        {"wallnut", "", 0, 0.11f, "res\\images\\Plants\\WallNut\\WallNut.gif"},
+        {"potatomine", "", 0, 0.11f, "res\\images\\Plants\\PotatoMine\\PotatoMine.gif"},
+        {"snowpea", "", 0, 0.11f, "res\\images\\Plants\\SnowPea\\SnowPea.gif"},
+        {"cherrybomb", "", 0, 0.11f, "res\\images\\Plants\\CherryBomb\\CherryBomb.gif"},
+        {"repeater", "", 0, 0.11f, "res\\images\\Plants\\Repeater\\Repeater.gif"},
+        {"scaredyshroom", "", 0, 0.11f, "res\\images\\Plants\\ScaredyShroom\\ScaredyShroom.gif"},
+        {"fume", "", 0, 0.11f, "res\\images\\Plants\\FumeShroom\\FumeShroom.gif"},
+        {"chomper", "", 0, 0.11f, "res\\images\\Plants\\Chomper\\ChomperAttack.gif"},
+        {"wsdr", "", 0, 0.10f, "res\\images\\Plants\\GatlingPea\\GatlingPea.gif"}
     };
     return defs;
 }
@@ -108,4 +112,6 @@ inline const PlantAnimDef* findPlantAnimDef(const std::string& id) {
 } // namespace matou::scene::levelcfg
 
 #endif
+
+
 

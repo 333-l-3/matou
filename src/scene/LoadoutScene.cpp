@@ -20,17 +20,17 @@ void LoadoutScene::onEnter() {
     std::cout << "LoadoutScene: onEnter" << std::endl;
 
     allPlants.clear();
-    allPlants.push_back({"Íã¶¹ÉäÊÖ", "res\\images\\Peashooter.png", nullptr});
-    allPlants.push_back({"ÏòÈÕ¿û", "res\\images\\SunFlower.png", nullptr});
-    allPlants.push_back({"¼á¹ûÇ½", "res\\images\\WallNut.png", nullptr});
-    allPlants.push_back({"ÍÁ¶¹À×", "res\\images\\PotatoMine.png", nullptr});
-    allPlants.push_back({"º®±ùÉäÊÖ", "res\\images\\SnowPea.png", nullptr});
-    allPlants.push_back({"Ó£ÌÒÕ¨µ¯", "res\\images\\CherryBomb.png", nullptr});
-    allPlants.push_back({"Ë«·¢ÉäÊÖ", "res\\images\\Repeater.png", nullptr});
-    allPlants.push_back({"µ¨Ð¡¹½", "res\\images\\danxiaogu.png", nullptr});
-    allPlants.push_back({"µ¨´ó¹½", "res\\images\\dandagu.png", nullptr});
-    allPlants.push_back({"´ó×ì»¨", "res\\images\\dazuihua.png", nullptr});
-    allPlants.push_back({"Î¬Ê²´÷¶û", "res\\images\\wsdr.png", nullptr});
+    allPlants.push_back({"Íã¶¹ÉäÊÖ", "res\\images\\Plants\\Peashooter\\0.gif", nullptr});
+    allPlants.push_back({"ÏòÈÕ¿û", "res\\images\\Plants\\SunFlower\\0.gif", nullptr});
+    allPlants.push_back({"¼á¹ûÇ½", "res\\images\\Plants\\WallNut\\0.gif", nullptr});
+    allPlants.push_back({"ÍÁ¶¹À×", "res\\images\\Plants\\PotatoMine\\0.gif", nullptr});
+    allPlants.push_back({"º®±ùÉäÊÖ", "res\\images\\Plants\\SnowPea\\0.gif", nullptr});
+    allPlants.push_back({"Ó£ÌÒÕ¨µ¯", "res\\images\\Plants\\CherryBomb\\0.gif", nullptr});
+    allPlants.push_back({"Ë«·¢ÉäÊÖ", "res\\images\\Plants\\Repeater\\0.gif", nullptr});
+    allPlants.push_back({"µ¨Ð¡¹½", "res\\images\\Plants\\ScaredyShroom\\0.gif", nullptr});
+    allPlants.push_back({"µ¨´ó¹½", "res\\images\\Plants\\FumeShroom\\0.gif", nullptr});
+    allPlants.push_back({"´ó×ì»¨", "res\\images\\Plants\\Chomper\\0.gif", nullptr});
+    allPlants.push_back({"Î¬Ê²´÷¶û", "res\\images\\Plants\\GatlingPea\\0.gif", nullptr});
 
     ResourceManager* rm = manager ? manager->getResourceManager() : nullptr;
     if (rm) {
@@ -335,6 +335,9 @@ void LoadoutScene::render(sf::RenderTarget& target) {
         }
     }
 }
+
+
+
 
 
 
