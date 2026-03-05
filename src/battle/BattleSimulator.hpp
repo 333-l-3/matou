@@ -5,6 +5,7 @@
 #include "StatsDatabase.hpp"
 #include <vector>
 #include <string>
+#include <functional>
 
 namespace matou::battle {
 
@@ -23,6 +24,8 @@ struct ZombieUnit {
     float slowTimer = 0.f;
     bool dying = false;
     float deathTimer = 0.f;
+    bool attacking = false;
+    float attackTimer = 0.f;
 };
 
 class BattleSimulator {
@@ -35,7 +38,7 @@ public:
     bool forcePlacePlant(const std::string& plantId, int row, int col);
     bool spawnZombie(const std::string& zombieId, int row, float startX);
 
-    void update(float dt);
+    void update(float dt, const std::function<float(int, int)>& getPlantCenterX);
 
     int sun() const { return currentSun; }
     void addSun(int v) { currentSun += v; }

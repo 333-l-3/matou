@@ -21,6 +21,8 @@ constexpr float kBaseW = 1000.f;
 constexpr float kBaseH = 600.f;
 constexpr int kPointRows = 6;
 constexpr int kPointCols = 10;
+constexpr float kLoseBandWidth = 52.f;
+constexpr float kLoseTriggerInset = 12.f;
 
 using PointGrid = std::array<std::array<sf::Vector2f, kPointCols>, kPointRows>;
 
@@ -89,7 +91,7 @@ void Level1Scene::onEnter() {
         if (tex) {
             bgTexture = tex;
             bgSprite.setTexture(*bgTexture);
-        }
+     }
     }
 
     rightDragging = false;
@@ -99,10 +101,12 @@ void Level1Scene::onEnter() {
     placedPlants.clear();
     attackSystem.reset();
     waveSpawnerEnabled = false;
+    gameLost = false;
 
     zombieAnimTimeById.clear();
     zombieAnimFrameById.clear();
     zombieWalkFramesById.clear();
+    zombieAttackFramesById.clear();
     zombieDieFramesById.clear();
 
     plantAnimTimeById.clear();
@@ -120,7 +124,7 @@ void Level1Scene::onEnter() {
         for (auto& p : all) {
             p.texture = rm->getTexture(matou::tool::file::resourcePath(p.imageRelPath));
             if (p.texture) p.texture->setSmooth(false);
-        }
+     }
     }
 
     plantOptions.clear();
@@ -129,12 +133,12 @@ void Level1Scene::onEnter() {
         for (int id : loadout) {
             if (id >= 0 && id < static_cast<int>(all.size())) plantOptions.push_back(all[static_cast<size_t>(id)]);
             if (plantOptions.size() >= static_cast<size_t>(matou::scene::levelcfg::maxLoadoutCards())) break;
-        }
+     }
     }
     if (plantOptions.empty()) {
         for (size_t i = 0; i < all.size() && i < static_cast<size_t>(matou::scene::levelcfg::maxLoadoutCards()); ++i) {
             plantOptions.push_back(all[i]);
-        }
+     }
     }
 
     bool battleReady = battleSim.initialize(
@@ -152,8 +156,8 @@ void Level1Scene::onEnter() {
             bool spawned = battleReady && battleSim.spawnZombie(spawn.id, spawn.row, spawn.startX);
             if (!spawned) {
                 battleSim.zombiesMutable().push_back({spawn.id, spawn.row, spawn.startX, spawn.hpFallback, 0.f, false, 0.f});
-            }
-        }
+         }
+     }
     }
 
     if (rm) {
@@ -169,7 +173,7 @@ void Level1Scene::onEnter() {
                 if (!tex) break;
                 tex->setSmooth(false);
                 walkFrames.push_back(tex);
-            }
+         }
             if (walkFrames.empty() && zdef.walkFallbackA && zdef.walkFallbackA[0] != '\0') {
                 const std::string gifAbs = matou::tool::file::resourcePath(zdef.walkFallbackA);
                 auto anim = rm->getGifAnimation(gifAbs);
@@ -178,13 +182,13 @@ void Level1Scene::onEnter() {
                         if (!f) continue;
                         f->setSmooth(false);
                         walkFrames.push_back(f);
-                    }
-                }
+                 }
+             }
                 if (walkFrames.empty()) {
                     auto tex = rm->getTexture(gifAbs);
                     if (tex) { tex->setSmooth(false); walkFrames.push_back(tex); }
-                }
-            }
+             }
+         }
             if (walkFrames.empty() && zdef.walkFallbackB && zdef.walkFallbackB[0] != '\0') {
                 const std::string gifAbs = matou::tool::file::resourcePath(zdef.walkFallbackB);
                 auto anim = rm->getGifAnimation(gifAbs);
@@ -193,13 +197,30 @@ void Level1Scene::onEnter() {
                         if (!f) continue;
                         f->setSmooth(false);
                         walkFrames.push_back(f);
-                    }
-                }
+                 }
+             }
                 if (walkFrames.empty()) {
                     auto tex = rm->getTexture(gifAbs);
                     if (tex) { tex->setSmooth(false); walkFrames.push_back(tex); }
-                }
-            }
+             }
+         }
+
+            auto& attackFrames = zombieAttackFramesById[zdef.id];
+            if (zdef.walkFallbackB && zdef.walkFallbackB[0] != '\0') {
+                const std::string gifAbs = matou::tool::file::resourcePath(zdef.walkFallbackB);
+                auto anim = rm->getGifAnimation(gifAbs);
+                if (anim && !anim->frames.empty()) {
+                    for (auto& f : anim->frames) {
+                        if (!f) continue;
+                        f->setSmooth(false);
+                        attackFrames.push_back(f);
+                 }
+             }
+                if (attackFrames.empty()) {
+                    auto tex = rm->getTexture(gifAbs);
+                    if (tex) { tex->setSmooth(false); attackFrames.push_back(tex); }
+             }
+         }
 
             auto& dieFrames = zombieDieFramesById[zdef.id];
             for (int i = 0; i < zdef.dieMaxFrames; ++i) {
@@ -212,7 +233,7 @@ void Level1Scene::onEnter() {
                 if (!tex) break;
                 tex->setSmooth(false);
                 dieFrames.push_back(tex);
-            }
+         }
             if (dieFrames.empty() && zdef.dieFallback && zdef.dieFallback[0] != '\0') {
                 const std::string gifAbs = matou::tool::file::resourcePath(zdef.dieFallback);
                 auto anim = rm->getGifAnimation(gifAbs);
@@ -221,14 +242,14 @@ void Level1Scene::onEnter() {
                         if (!f) continue;
                         f->setSmooth(false);
                         dieFrames.push_back(f);
-                    }
-                }
+                 }
+             }
                 if (dieFrames.empty()) {
                     auto tex = rm->getTexture(gifAbs);
                     if (tex) { tex->setSmooth(false); dieFrames.push_back(tex); }
-                }
-            }
-        }
+             }
+         }
+     }
 
         for (const auto& pdef : matou::scene::levelcfg::plantAnimDefs()) {
             auto& frames = plantIdleFramesById[pdef.id];
@@ -242,7 +263,7 @@ void Level1Scene::onEnter() {
                 if (!tex) break;
                 tex->setSmooth(false);
                 frames.push_back(tex);
-            }
+         }
             if (frames.empty() && pdef.fallbackStatic && pdef.fallbackStatic[0] != '\0') {
                 const std::string gifAbs = matou::tool::file::resourcePath(pdef.fallbackStatic);
                 auto anim = rm->getGifAnimation(gifAbs);
@@ -251,24 +272,59 @@ void Level1Scene::onEnter() {
                         if (!f) continue;
                         f->setSmooth(false);
                         frames.push_back(f);
-                    }
-                }
+                 }
+             }
                 if (frames.empty()) {
                     auto tex = rm->getTexture(gifAbs);
                     if (tex) { tex->setSmooth(false); frames.push_back(tex); }
-                }
-            }
-        }
+             }
+         }
+     }
 
         bulletTexture = rm->getTexture(matou::tool::file::resourcePath("res\\images\\Plants\\PB01.gif"));
         if (bulletTexture) bulletTexture->setSmooth(false);
-        bulletSnowTexture = rm->getTexture(matou::tool::file::resourcePath("res\\images\\Plants\\SnowPea\\SnowPea.gif"));
+        bulletSnowTexture = rm->getTexture(matou::tool::file::resourcePath("res\\images\\Plants\\SnowPea\\PB-10.gif"));
         if (bulletSnowTexture) bulletSnowTexture->setSmooth(false);
         bulletShroomTexture = rm->getTexture(matou::tool::file::resourcePath("res\\images\\Plants\\ScaredyShroom\\ShroomBullet.gif"));
         if (!bulletShroomTexture) bulletShroomTexture = rm->getTexture(matou::tool::file::resourcePath("res\\images\\Plants\\ShroomBullet.gif"));
         if (bulletShroomTexture) bulletShroomTexture->setSmooth(false);
-        bulletFumeTexture = rm->getTexture(matou::tool::file::resourcePath("res\\images\\Plants\\FumeShroom\\FumeShroomBullet.gif"));
+        bulletFumeFrames.clear();
+        const std::string fumeBulletPath = matou::tool::file::resourcePath("res\\images\\Plants\\FumeShroom\\FumeShroomBullet.gif");
+        auto fumeAnim = rm->getGifAnimation(fumeBulletPath);
+        if (fumeAnim && !fumeAnim->frames.empty()) {
+            bulletFumeFrames.reserve(fumeAnim->frames.size());
+            for (auto& f : fumeAnim->frames) {
+                if (!f) continue;
+                f->setSmooth(false);
+                bulletFumeFrames.push_back(f);
+         }
+     }
+        bulletFumeTexture = rm->getTexture(fumeBulletPath);
         if (bulletFumeTexture) bulletFumeTexture->setSmooth(false);
+
+        zombiesWonTexture = rm->getTexture(matou::tool::file::resourcePath("res\\images\\interface\\ZombiesWon.png"));
+        if (zombiesWonTexture) zombiesWonTexture->setSmooth(false);
+        potatoMineNotReadyTexture = rm->getTexture(matou::tool::file::resourcePath("res\\images\\Plants\\PotatoMine\\PotatoMineNotReady.gif"));
+        if (potatoMineNotReadyTexture) potatoMineNotReadyTexture->setSmooth(false);
+
+        potatoMineExplosionFrames.clear();
+        const std::string mineExplosionPath = matou::tool::file::resourcePath("res\\images\\Plants\\PotatoMine\\PotatoMine_mashed.gif");
+        auto mineExplosionAnim = rm->getGifAnimation(mineExplosionPath);
+        if (mineExplosionAnim && !mineExplosionAnim->frames.empty()) {
+            potatoMineExplosionFrames.reserve(mineExplosionAnim->frames.size());
+            for (auto& f : mineExplosionAnim->frames) {
+                if (!f) continue;
+                f->setSmooth(false);
+                potatoMineExplosionFrames.push_back(f);
+            }
+        }
+        if (potatoMineExplosionFrames.empty()) {
+            auto mineExplosionTex = rm->getTexture(mineExplosionPath);
+            if (mineExplosionTex) {
+                mineExplosionTex->setSmooth(false);
+                potatoMineExplosionFrames.push_back(mineExplosionTex);
+            }
+        }
     }
 
     rebuildLayout(cachedViewSize);
@@ -279,57 +335,9 @@ void Level1Scene::onExit() {
 }
 
 void Level1Scene::update(float dt) {
+    if (gameLost) return;
     if (waveSpawnerEnabled) {
         waveSpawner.update(dt, battleSim, lawnRows);
-    }
-
-    battleSim.update(dt);
-
-    for (const auto& pair : zombieWalkFramesById) {
-        const std::string& zid = pair.first;
-        const auto& frames = pair.second;
-        if (frames.empty()) continue;
-
-        bool aliveInScene = false;
-        for (const auto& z : battleSim.zombies()) {
-            if (z.zombieId == zid) { aliveInScene = true; break; }
-        }
-        if (!aliveInScene) continue;
-
-        float frameStep = 0.08f;
-        if (const auto* def = matou::scene::levelcfg::findZombieAnimDef(zid)) frameStep = std::max(0.02f, def->frameStep);
-
-        float& animTime = zombieAnimTimeById[zid];
-        int& animFrame = zombieAnimFrameById[zid];
-        animTime += dt;
-        while (animTime >= frameStep) {
-            animTime -= frameStep;
-            animFrame = (animFrame + 1) % static_cast<int>(frames.size());
-        }
-    }
-
-    for (const auto& pair : plantIdleFramesById) {
-        const std::string& pid = pair.first;
-        const auto& frames = pair.second;
-        if (frames.empty()) continue;
-
-        bool placedAlive = false;
-        for (const auto& pp : placedPlants) {
-            if (pp.optionIndex < 0 || pp.optionIndex >= static_cast<int>(plantOptions.size())) continue;
-            if (plantOptions[static_cast<size_t>(pp.optionIndex)].id == pid) { placedAlive = true; break; }
-        }
-        if (!placedAlive) continue;
-
-        float frameStep = 0.10f;
-        if (const auto* def = matou::scene::levelcfg::findPlantAnimDef(pid)) frameStep = std::max(0.02f, def->frameStep);
-
-        float& animTime = plantAnimTimeById[pid];
-        int& animFrame = plantAnimFrameById[pid];
-        animTime += dt;
-        while (animTime >= frameStep) {
-            animTime -= frameStep;
-            animFrame = (animFrame + 1) % static_cast<int>(frames.size());
-        }
     }
 
     attackSystem.update(
@@ -343,18 +351,105 @@ void Level1Scene::update(float dt) {
             float left = kBaseGrid[static_cast<size_t>(r + 1)][static_cast<size_t>(c)].x;
             float right = kBaseGrid[static_cast<size_t>(r + 1)][static_cast<size_t>(c + 1)].x;
             return (left + right) * 0.5f;
-        }
+     },
+        [this](int sun) {
+            battleSim.addSun(sun);
+     }
+    );
+
+    for (const auto& pair : zombieWalkFramesById) {
+        const std::string& zid = pair.first;
+
+        bool aliveInScene = false;
+        bool anyAttacking = false;
+        for (const auto& z : battleSim.zombies()) {
+            if (z.zombieId != zid) continue;
+            aliveInScene = true;
+            if (z.attacking && !z.dying) anyAttacking = true;
+     }
+        if (!aliveInScene) continue;
+
+        const std::vector<std::shared_ptr<sf::Texture>>* frames = nullptr;
+        if (anyAttacking) {
+            auto ait = zombieAttackFramesById.find(zid);
+            if (ait != zombieAttackFramesById.end() && !ait->second.empty()) {
+                frames = &ait->second;
+         }
+     }
+        if (!frames) {
+            const auto& walkFrames = pair.second;
+            if (!walkFrames.empty()) frames = &walkFrames;
+     }
+        if (!frames || frames->empty()) continue;
+
+        float frameStep = 0.08f;
+        if (const auto* def = matou::scene::levelcfg::findZombieAnimDef(zid)) frameStep = std::max(0.02f, def->frameStep);
+
+        float& animTime = zombieAnimTimeById[zid];
+        int& animFrame = zombieAnimFrameById[zid];
+        animTime += dt;
+        while (animTime >= frameStep) {
+            animTime -= frameStep;
+            animFrame = (animFrame + 1) % static_cast<int>(frames->size());
+     }
+    }
+
+    for (const auto& pair : plantIdleFramesById) {
+        const std::string& pid = pair.first;
+        const auto& frames = pair.second;
+        if (frames.empty()) continue;
+
+        bool placedAlive = false;
+        for (const auto& pp : placedPlants) {
+            if (pp.optionIndex < 0 || pp.optionIndex >= static_cast<int>(plantOptions.size())) continue;
+            if (plantOptions[static_cast<size_t>(pp.optionIndex)].id == pid) { placedAlive = true; break; }
+     }
+        if (!placedAlive) continue;
+
+        float frameStep = 0.10f;
+        if (const auto* def = matou::scene::levelcfg::findPlantAnimDef(pid)) frameStep = std::max(0.02f, def->frameStep);
+
+        float& animTime = plantAnimTimeById[pid];
+        int& animFrame = plantAnimFrameById[pid];
+        animTime += dt;
+        while (animTime >= frameStep) {
+            animTime -= frameStep;
+            animFrame = (animFrame + 1) % static_cast<int>(frames.size());
+     }
+    }
+
+    battleSim.update(
+        dt,
+        [](int row, int col) -> float {
+            int r = std::clamp(row, 0, lawnRows - 1);
+            int c = std::clamp(col, 0, lawnCols - 1);
+            float left = kBaseGrid[static_cast<size_t>(r + 1)][static_cast<size_t>(c)].x;
+            float right = kBaseGrid[static_cast<size_t>(r + 1)][static_cast<size_t>(c + 1)].x;
+            return (left + right) * 0.5f;
+     }
     );
 
     placedPlants.erase(
         std::remove_if(placedPlants.begin(), placedPlants.end(), [this](const PlacedPlant& pp) {
             for (const auto& bp : battleSim.plants()) {
                 if (bp.row == pp.row && bp.col == pp.col) return false;
-            }
+         }
             return true;
-        }),
+     }),
         placedPlants.end()
     );
+
+    for (const auto& z : battleSim.zombies()) {
+        int r = std::clamp(z.row, 0, lawnRows - 1);
+        const float loseX = kBaseGrid[static_cast<size_t>(r + 1)][0].x - kLoseBandWidth - kLoseTriggerInset;
+        if (!z.dying && z.x <= loseX) {
+            gameLost = true;
+            rightDragging = false;
+            draggingPlant = false;
+            draggingPlantIndex = -1;
+            break;
+     }
+    }
 }
 
 void Level1Scene::render(sf::RenderTarget& target) {
@@ -368,6 +463,23 @@ void Level1Scene::render(sf::RenderTarget& target) {
     bgSprite.setScale(cachedScale, cachedScale);
     bgSprite.setPosition(-viewOffsetX, 0.f);
     target.draw(bgSprite);
+
+    // Left danger zone: zombie entering this area means defeat.
+    for (int r = 0; r < lawnRows; ++r) {
+        const sf::Vector2f& tl = gridPoints[static_cast<size_t>(r * kPointCols)];
+        const sf::Vector2f& bl = gridPoints[static_cast<size_t>((r + 1) * kPointCols)];
+
+        sf::ConvexShape zone;
+        zone.setPointCount(4);
+        zone.setPoint(0, sf::Vector2f(tl.x - kLoseBandWidth, tl.y));
+        zone.setPoint(1, tl);
+        zone.setPoint(2, bl);
+        zone.setPoint(3, sf::Vector2f(bl.x - kLoseBandWidth, bl.y));
+        zone.setFillColor(sf::Color(150, 20, 20, 55));
+        zone.setOutlineThickness(1.f);
+        zone.setOutlineColor(sf::Color(235, 60, 60, 130));
+        target.draw(zone);
+    }
 
     for (const auto& p : placedPlants) {
         if (p.optionIndex < 0 || p.optionIndex >= static_cast<int>(plantOptions.size())) continue;
@@ -391,8 +503,14 @@ void Level1Scene::render(sf::RenderTarget& target) {
         if (fit != plantIdleFramesById.end() && !fit->second.empty()) {
             int fidx = plantAnimFrameById[option.id] % static_cast<int>(fit->second.size());
             ptex = fit->second[static_cast<size_t>(fidx)];
-        }
+     }
 
+        const bool isPotatoMine = (option.id == "potatomine");
+        float mineArmProgress = 1.f;
+        if (isPotatoMine) {
+            mineArmProgress = std::clamp(attackSystem.potatoMineArmProgress(p.row, p.col), 0.f, 1.f);
+            if (!ptex && potatoMineNotReadyTexture) ptex = potatoMineNotReadyTexture;
+        }
         if (!ptex) continue;
 
         sf::Sprite sp;
@@ -418,7 +536,125 @@ void Level1Scene::render(sf::RenderTarget& target) {
         float h = static_cast<float>(tsz.y) * s;
         sf::Vector2f bottomCenter = (bl + br) * 0.5f;
         sp.setPosition(bottomCenter.x - w * 0.5f, bottomCenter.y - h);
-        target.draw(sp);
+        if (isPotatoMine && potatoMineNotReadyTexture) {
+            float eased = mineArmProgress * mineArmProgress * (3.f - 2.f * mineArmProgress);
+            eased = std::clamp(eased, 0.f, 1.f);
+
+            sf::Sprite readySp = sp;
+            const sf::Uint8 readyA = static_cast<sf::Uint8>(30.f + 225.f * eased);
+            readySp.setColor(sf::Color(255, 255, 255, readyA));
+            target.draw(readySp);
+
+            if (eased < 0.999f) {
+                sf::Sprite notReadySp;
+                notReadySp.setTexture(*potatoMineNotReadyTexture);
+                auto ntsz = potatoMineNotReadyTexture->getSize();
+                if (ntsz.x > 0 && ntsz.y > 0) {
+                    float nsx = maxW / static_cast<float>(ntsz.x);
+                    float nsy = maxH / static_cast<float>(ntsz.y);
+                    float ns = std::min(nsx, nsy);
+                    notReadySp.setScale(ns, ns);
+                    float nw = static_cast<float>(ntsz.x) * ns;
+                    float nh = static_cast<float>(ntsz.y) * ns;
+                    notReadySp.setPosition(bottomCenter.x - nw * 0.5f, bottomCenter.y - nh);
+                    const sf::Uint8 notReadyA = static_cast<sf::Uint8>(255.f * (1.f - eased));
+                    notReadySp.setColor(sf::Color(255, 255, 255, notReadyA));
+                    target.draw(notReadySp);
+                }
+            }
+        } else {
+            target.draw(sp);
+        }
+        int maxHp = 300;
+        if (const auto* pst = battleSim.stats().getPlant(option.id)) {
+            maxHp = std::max(1, pst->hp);
+     }
+        int curHp = 0;
+        for (const auto& bp : battleSim.plants()) {
+            if (bp.row == p.row && bp.col == p.col) {
+                curHp = bp.hp;
+                break;
+         }
+     }
+        curHp = std::clamp(curHp, 0, maxHp);
+        float hpRatio = static_cast<float>(curHp) / static_cast<float>(maxHp);
+
+        const float barW = std::max(20.f, w * 0.45f);
+        const float barH = 6.f;
+        const float barX = bottomCenter.x - barW * 0.5f;
+        const float barY = sp.getPosition().y - 11.f;
+
+        sf::RectangleShape hpBg({barW, barH});
+        hpBg.setPosition(barX, barY);
+        hpBg.setFillColor(sf::Color(30, 30, 30, 190));
+        hpBg.setOutlineThickness(1.f);
+        hpBg.setOutlineColor(sf::Color(0, 0, 0, 220));
+        target.draw(hpBg);
+
+        sf::RectangleShape hpFill({barW * hpRatio, barH});
+        hpFill.setPosition(barX, barY);
+        hpFill.setFillColor(sf::Color(70, 220, 90, 230));
+        target.draw(hpFill);
+
+        if (manager && manager->getSharedFont()) {
+            sf::Text hpText;
+            hpText.setFont(*manager->getSharedFont());
+            hpText.setCharacterSize(10);
+            hpText.setFillColor(sf::Color(255, 255, 255, 230));
+            hpText.setString(std::to_string(curHp) + "/" + std::to_string(maxHp));
+            auto hb = hpText.getLocalBounds();
+            hpText.setPosition(
+                bottomCenter.x - hb.width * 0.5f - hb.left,
+                barY - hb.height - 3.f - hb.top
+            );
+            target.draw(hpText);
+     }
+    }
+
+    // 土豆雷爆炸特效
+    for (const auto& fx : attackSystem.mineExplosions()) {
+        if (fx.row < 0 || fx.row >= lawnRows) continue;
+
+        const sf::Vector2f& leftTop = gridPoints[static_cast<size_t>(fx.row * kPointCols)];
+        const sf::Vector2f& rightTop = gridPoints[static_cast<size_t>(fx.row * kPointCols + (kPointCols - 1))];
+        const sf::Vector2f& leftBottom = gridPoints[static_cast<size_t>((fx.row + 1) * kPointCols)];
+        const sf::Vector2f& rightBottom = gridPoints[static_cast<size_t>((fx.row + 1) * kPointCols + (kPointCols - 1))];
+
+        float worldLeft = kBaseGrid[static_cast<size_t>(fx.row + 1)][0].x;
+        float worldRight = kBaseGrid[static_cast<size_t>(fx.row + 1)][kPointCols - 1].x;
+        float trow = (worldRight - worldLeft) == 0.f ? 0.5f : (fx.x - worldLeft) / (worldRight - worldLeft);
+        trow = std::clamp(trow, 0.f, 1.f);
+
+        float sx = fx.x - viewOffsetX;
+        float footY = leftBottom.y + (rightBottom.y - leftBottom.y) * trow;
+
+        if (!potatoMineExplosionFrames.empty()) {
+            float ratio = fx.duration > 0.f ? std::clamp(fx.elapsed / fx.duration, 0.f, 1.f) : 1.f;
+            int fidx = std::clamp(static_cast<int>(ratio * static_cast<float>(potatoMineExplosionFrames.size())), 0, static_cast<int>(potatoMineExplosionFrames.size()) - 1);
+            auto tex = potatoMineExplosionFrames[static_cast<size_t>(fidx)];
+            if (!tex) continue;
+
+            sf::Sprite es;
+            es.setTexture(*tex);
+            auto tsz = tex->getSize();
+            if (tsz.x == 0 || tsz.y == 0) continue;
+
+            float rowH = std::fabs((leftBottom.y + rightBottom.y) * 0.5f - (leftTop.y + rightTop.y) * 0.5f);
+            float targetH = rowH * 1.4f;
+            float s = targetH / static_cast<float>(tsz.y);
+            es.setScale(s, s);
+
+            float w = static_cast<float>(tsz.x) * s;
+            float h = static_cast<float>(tsz.y) * s;
+            es.setPosition(sx - w * 0.5f, footY - h * 0.78f);
+            target.draw(es);
+     } else {
+            sf::CircleShape c(std::max(18.f, lawnCellH * 0.35f));
+            c.setOrigin(c.getRadius(), c.getRadius());
+            c.setPosition(sx, footY - lawnCellH * 0.45f);
+            c.setFillColor(sf::Color(255, 180, 60, 180));
+            target.draw(c);
+     }
     }
 
     // 动画僵尸（行走/死亡）
@@ -430,22 +666,30 @@ void Level1Scene::render(sf::RenderTarget& target) {
             if (dit != zombieDieFramesById.end() && !dit->second.empty()) {
                 int didx = zombieAnimFrameById[z.zombieId] % static_cast<int>(dit->second.size());
                 ztex = dit->second[static_cast<size_t>(didx)];
-            }
-        }
+         }
+     }
+
+        if (!ztex && z.attacking) {
+            auto ait = zombieAttackFramesById.find(z.zombieId);
+            if (ait != zombieAttackFramesById.end() && !ait->second.empty()) {
+                int aidx = zombieAnimFrameById[z.zombieId] % static_cast<int>(ait->second.size());
+                ztex = ait->second[static_cast<size_t>(aidx)];
+         }
+     }
 
         if (!ztex) {
             auto fit = zombieWalkFramesById.find(z.zombieId);
             if (fit != zombieWalkFramesById.end() && !fit->second.empty()) {
                 int fidx = zombieAnimFrameById[z.zombieId] % static_cast<int>(fit->second.size());
                 ztex = fit->second[static_cast<size_t>(fidx)];
-            } else {
+         } else {
                 auto nit = zombieWalkFramesById.find("normal");
                 if (nit != zombieWalkFramesById.end() && !nit->second.empty()) {
                     int fidx = zombieAnimFrameById["normal"] % static_cast<int>(nit->second.size());
                     ztex = nit->second[static_cast<size_t>(fidx)];
-                }
-            }
-        }
+             }
+         }
+     }
 
         if (!ztex || ztex->getSize().x == 0 || ztex->getSize().y == 0) continue;
 
@@ -476,6 +720,46 @@ void Level1Scene::render(sf::RenderTarget& target) {
         zs.setPosition(sx - w * 0.5f, footY - h);
         if (!z.dying && z.slowTimer > 0.f) zs.setColor(sf::Color(200, 230, 255));
         target.draw(zs);
+
+        int maxHp = z.hp;
+        if (const auto* zstats = battleSim.stats().getZombie(z.zombieId)) {
+            maxHp = std::max(1, zstats->hp);
+     } else {
+            maxHp = std::max(1, maxHp);
+     }
+        int curHp = std::clamp(z.hp, 0, maxHp);
+        float hpRatio = static_cast<float>(curHp) / static_cast<float>(maxHp);
+
+        const float barW = std::max(18.f, w * 0.42f);
+        const float barH = 6.f;
+        const float barX = sx - barW * 0.5f;
+        const float barY = footY - h - 12.f;
+
+        sf::RectangleShape hpBg({barW, barH});
+        hpBg.setPosition(barX, barY);
+        hpBg.setFillColor(sf::Color(30, 30, 30, 190));
+        hpBg.setOutlineThickness(1.f);
+        hpBg.setOutlineColor(sf::Color(0, 0, 0, 220));
+        target.draw(hpBg);
+
+        sf::RectangleShape hpFill({barW * hpRatio, barH});
+        hpFill.setPosition(barX, barY);
+        hpFill.setFillColor(sf::Color(70, 220, 90, 230));
+        target.draw(hpFill);
+
+        if (manager && manager->getSharedFont()) {
+            sf::Text hpText;
+            hpText.setFont(*manager->getSharedFont());
+            hpText.setCharacterSize(10);
+            hpText.setFillColor(sf::Color(255, 255, 255, 230));
+            hpText.setString(std::to_string(curHp) + "/" + std::to_string(maxHp));
+            auto hb = hpText.getLocalBounds();
+            hpText.setPosition(
+                sx - hb.width * 0.5f - hb.left,
+                barY - hb.height - 3.f - hb.top
+            );
+            target.draw(hpText);
+     }
     }
 
     // 子弹
@@ -505,25 +789,31 @@ void Level1Scene::render(sf::RenderTarget& target) {
                 fs.setTexture(*bulletFumeTexture);
                 auto tsz = bulletFumeTexture->getSize();
                 if (tsz.x > 0 && tsz.y > 0) {
-                    const int rowCount = 8;
-                    int rowH = static_cast<int>(tsz.y / rowCount);
-                    if (rowH <= 0) rowH = static_cast<int>(tsz.y);
-
+                    constexpr int frameCount = 8;
                     float lifeRatio = 0.f;
                     if (b.maxLife > 0.0001f) {
                         lifeRatio = 1.f - std::clamp(b.life / b.maxLife, 0.f, 1.f);
-                    }
-                    int rowIdx = std::clamp(static_cast<int>(lifeRatio * static_cast<float>(rowCount)), 0, rowCount - 1);
+                 }
+                    int frameIdx = std::clamp(static_cast<int>(lifeRatio * static_cast<float>(frameCount)), 0, frameCount - 1);
 
-                    fs.setTextureRect(sf::IntRect(0, rowIdx * rowH, static_cast<int>(tsz.x), rowH));
-                    float sxScale = sprayW / static_cast<float>(tsz.x);
-                    float syScale = sprayH / static_cast<float>(rowH);
+                    bool horizontalSheet = tsz.x >= tsz.y;
+                    int frameW = horizontalSheet ? static_cast<int>(tsz.x / frameCount) : static_cast<int>(tsz.x);
+                    int frameH = horizontalSheet ? static_cast<int>(tsz.y) : static_cast<int>(tsz.y / frameCount);
+                    if (frameW <= 0) frameW = static_cast<int>(tsz.x);
+                    if (frameH <= 0) frameH = static_cast<int>(tsz.y);
+
+                    int left = horizontalSheet ? frameIdx * frameW : 0;
+                    int top = horizontalSheet ? 0 : frameIdx * frameH;
+                    fs.setTextureRect(sf::IntRect(left, top, frameW, frameH));
+
+                    float sxScale = sprayW / static_cast<float>(frameW);
+                    float syScale = sprayH / static_cast<float>(frameH);
                     fs.setScale(sxScale, syScale);
                     fs.setPosition(sx, y - sprayH * 0.5f);
                     fs.setColor(sf::Color(255, 255, 255, 235));
                     target.draw(fs);
-                }
-            } else {
+             }
+         } else {
                 sf::RectangleShape spray;
                 spray.setSize({sprayW, sprayH});
                 spray.setOrigin(0.f, sprayH * 0.5f);
@@ -531,21 +821,29 @@ void Level1Scene::render(sf::RenderTarget& target) {
                 spray.setFillColor(sf::Color(205, 175, 235, 180));
                 spray.setOutlineThickness(0.f);
                 target.draw(spray);
-            }
+         }
             continue;
-        }
+     }
 
         std::shared_ptr<sf::Texture> btex = bulletTexture;
         float bulletSize = 24.f;
         if (b.sourcePlantId == "snowpea" && bulletSnowTexture) {
             btex = bulletSnowTexture;
             bulletSize = 28.f;
-        } else if (b.sourcePlantId == "scaredyshroom" && bulletShroomTexture) {
+     } else if (b.sourcePlantId == "scaredyshroom" && bulletShroomTexture) {
             btex = bulletShroomTexture;
             bulletSize = 26.f;
-        } else if (b.sourcePlantId == "wsdr") {
+     } else if (b.sourcePlantId == "wsdr") {
             bulletSize = 21.f;
-        }
+     }
+
+        const bool peaBullet =
+            b.sourcePlantId == "peashooter" ||
+            b.sourcePlantId == "snowpea" ||
+            b.sourcePlantId == "repeater" ||
+            b.sourcePlantId == "wsdr" ||
+            b.sourcePlantId == "threepeater";
+        if (peaBullet) bulletSize *= 2.f;
 
         if (btex) {
             sf::Sprite bs;
@@ -559,8 +857,8 @@ void Level1Scene::render(sf::RenderTarget& target) {
                 bs.setPosition(sx - w * 0.5f, y - h * 0.5f);
                 if (b.sourcePlantId == "repeater" || b.sourcePlantId == "wsdr") bs.setColor(sf::Color(180, 255, 180));
                 target.draw(bs);
-            }
-        }
+         }
+     }
     }
 
     // 左侧竖列卡栏
@@ -599,8 +897,8 @@ void Level1Scene::render(sf::RenderTarget& target) {
                 float h = static_cast<float>(tsz.y) * s;
                 sp.setPosition(r.left + 6.f, r.top + (r.height - h) * 0.5f);
                 target.draw(sp);
-            }
-        }
+         }
+     }
 
         if (manager && manager->getSharedFont()) {
             sf::Text name;
@@ -611,7 +909,7 @@ void Level1Scene::render(sf::RenderTarget& target) {
             auto b = name.getLocalBounds();
             name.setPosition(r.left + r.width * 0.38f - b.left, r.top + (r.height - b.height) * 0.5f - b.top);
             target.draw(name);
-        }
+     }
     }
 
     if (draggingPlant && draggingPlantIndex >= 0 && draggingPlantIndex < static_cast<int>(plantOptions.size())) {
@@ -637,8 +935,8 @@ void Level1Scene::render(sf::RenderTarget& target) {
                 float h = static_cast<float>(tsz.y) * s;
                 ghost.setPosition(dragMousePos.x - w * 0.5f, dragMousePos.y - h * 0.5f);
                 target.draw(ghost);
-            }
-        }
+         }
+     }
     }
 
     sf::Text info;
@@ -650,6 +948,42 @@ void Level1Scene::render(sf::RenderTarget& target) {
     float ipadding = 12.f;
     info.setPosition(viewW - ib.width - ipadding - ib.left, 10.f - ib.top);
     target.draw(info);
+
+    if (gameLost) {
+        sf::RectangleShape mask(sf::Vector2f(viewW, static_cast<float>(target.getSize().y)));
+        mask.setFillColor(sf::Color(0, 0, 0, 145));
+        target.draw(mask);
+
+        if (zombiesWonTexture && zombiesWonTexture->getSize().x > 0 && zombiesWonTexture->getSize().y > 0) {
+            sf::Sprite won;
+            won.setTexture(*zombiesWonTexture);
+            const auto tsz = zombiesWonTexture->getSize();
+            float maxW = viewW * 0.64f;
+            float maxH = static_cast<float>(target.getSize().y) * 0.72f;
+            float sx = maxW / static_cast<float>(tsz.x);
+            float sy = maxH / static_cast<float>(tsz.y);
+            float s = std::min(sx, sy);
+            won.setScale(s, s);
+            float w = static_cast<float>(tsz.x) * s;
+            float h = static_cast<float>(tsz.y) * s;
+            won.setPosition((viewW - w) * 0.5f, (static_cast<float>(target.getSize().y) - h) * 0.45f);
+            target.draw(won);
+     }
+
+        if (manager && manager->getSharedFont()) {
+            sf::Text hint;
+            hint.setFont(*manager->getSharedFont());
+            hint.setCharacterSize(20);
+            hint.setFillColor(sf::Color(245, 245, 245));
+            hint.setString(GBKToSFString("任意按键或点击鼠标返回关卡选择"));
+            const auto hb = hint.getLocalBounds();
+            hint.setPosition(
+                (viewW - hb.width) * 0.5f - hb.left,
+                static_cast<float>(target.getSize().y) * 0.86f - hb.top
+            );
+            target.draw(hint);
+     }
+    }
 }
 
 bool Level1Scene::usesWindowBackground() const {
@@ -692,7 +1026,7 @@ void Level1Scene::rebuildLayout(sf::Vector2u viewSize) {
             minY = std::min(minY, p.y);
             maxX = std::max(maxX, p.x);
             maxY = std::max(maxY, p.y);
-        }
+     }
     }
 
     lawnRect = sf::FloatRect(minX, minY, std::max(1.f, maxX - minX), std::max(1.f, maxY - minY));
@@ -739,8 +1073,8 @@ bool Level1Scene::findCellByPoint(const sf::Vector2f& p, int& outRow, int& outCo
                 outRow = r;
                 outCol = c;
                 return true;
-            }
-        }
+         }
+     }
     }
     return false;
 }
@@ -753,6 +1087,18 @@ Level1Scene::PlacedPlant* Level1Scene::findPlacedPlant(int row, int col) {
 }
 
 void Level1Scene::handleEvent(const sf::Event& event) {
+    if (gameLost) {
+        if ((event.type == sf::Event::KeyPressed) ||
+            (event.type == sf::Event::MouseButtonPressed) ||
+            (event.type == sf::Event::MouseButtonReleased)) {
+            manager->requestChangeScene(std::make_unique<LevelSelectScene>(manager));
+            return;
+     }
+        if (event.type == sf::Event::Resized) {
+            rebuildLayout({event.size.width, event.size.height});
+     }
+        return;
+    }
     if (event.type == sf::Event::Resized) {
         rebuildLayout({event.size.width, event.size.height});
         return;
@@ -776,7 +1122,7 @@ void Level1Scene::handleEvent(const sf::Event& event) {
             draggingPlant = true;
             draggingPlantIndex = hit;
             return;
-        }
+     }
         return;
     }
 
@@ -795,11 +1141,11 @@ void Level1Scene::handleEvent(const sf::Event& event) {
                         if (!ok) ok = battleSim.forcePlacePlant(opt.id, row, col);
                         if (ok) {
                             placedPlants.push_back({draggingPlantIndex, row, col});
-                        }
-                    }
-                }
-            }
-        }
+                     }
+                 }
+             }
+         }
+     }
 
         draggingPlant = false;
         draggingPlantIndex = -1;
@@ -814,7 +1160,7 @@ void Level1Scene::handleEvent(const sf::Event& event) {
             viewOffsetX -= dx;
             lastMouseX = mx;
             rebuildLayout(cachedViewSize);
-        }
+     }
         return;
     }
 
@@ -825,7 +1171,7 @@ void Level1Scene::handleEvent(const sf::Event& event) {
         else if (event.key.code == sf::Keyboard::Escape) {
             manager->requestChangeScene(std::make_unique<LevelSelectScene>(manager));
             return;
-        }
+     }
         rebuildLayout(cachedViewSize);
     }
 }

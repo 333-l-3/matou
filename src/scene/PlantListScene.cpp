@@ -4,6 +4,7 @@
 #include "Scenes.hpp"
 #include "EncodingTool.hpp"
 #include "ResourceManager.hpp"
+#include "LevelContentRegistry.hpp"
 #include "file.hpp"
 
 #include <SFML/Window.hpp>
@@ -23,17 +24,11 @@ void PlantListScene::onEnter() {
     titleText.setFillColor(sf::Color(30, 30, 35));
 
     cards.clear();
-    cards.push_back({"豌豆射手", 100, "res\\images\\Plants\\Peashooter\\0.gif", "基础射手：持续发射豌豆"});
-    cards.push_back({"向日葵", 50, "res\\images\\Plants\\SunFlower\\0.gif", "生产阳光：为战斗提供资源"});
-    cards.push_back({"坚果", 50, "res\\images\\Plants\\WallNut\\0.gif", "防御植物：阻挡僵尸前进"});
-    cards.push_back({"土豆雷", 25, "res\\images\\Plants\\PotatoMine\\0.gif", "地雷：准备后爆炸，消灭附近敌人"});
-    cards.push_back({"寒冰射手", 175, "res\\images\\Plants\\SnowPea\\0.gif", "冰豌豆：减速敌人"});
-    cards.push_back({"樱桃炸弹", 150, "res\\images\\Plants\\CherryBomb\\0.gif", "爆炸：瞬间清除一片区域"});
-    cards.push_back({"双发射手", 200, "res\\images\\Plants\\Repeater\\0.gif", "双发：更快输出"});
-    cards.push_back({"胆小菇", 0, "res\\images\\Plants\\ScaredyShroom\\0.gif", "0消耗"});
-    cards.push_back({"胆大菇", 75, "res\\images\\Plants\\FumeShroom\\0.gif", "aoe伤害"});
-    cards.push_back({"大嘴花", 150, "res\\images\\Plants\\Chomper\\0.gif", "单体吞噬"});
-    cards.push_back({"维什戴尔", 800, "res\\images\\Plants\\GatlingPea\\0.gif", "我不知道这是什么"});
+    const auto& defs = matou::scene::levelcfg::allPlantCards();
+    cards.reserve(defs.size());
+    for (const auto& def : defs) {
+        cards.push_back({def.name, def.sunCost, def.imageRelPath, def.desc});
+    }
 
     ResourceManager* rm = manager ? manager->getResourceManager() : nullptr;
     for (auto& c : cards) {

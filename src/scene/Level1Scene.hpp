@@ -67,16 +67,22 @@ private:
     matou::battle::WaveSpawnController waveSpawner;
     bool waveSpawnerEnabled = false;
     std::unordered_map<std::string, std::vector<std::shared_ptr<sf::Texture>>> zombieWalkFramesById;
+    std::unordered_map<std::string, std::vector<std::shared_ptr<sf::Texture>>> zombieAttackFramesById;
     std::unordered_map<std::string, std::vector<std::shared_ptr<sf::Texture>>> zombieDieFramesById;
     std::unordered_map<std::string, std::vector<std::shared_ptr<sf::Texture>>> plantIdleFramesById;
     std::shared_ptr<sf::Texture> bulletTexture;
     std::shared_ptr<sf::Texture> bulletSnowTexture;
     std::shared_ptr<sf::Texture> bulletShroomTexture;
     std::shared_ptr<sf::Texture> bulletFumeTexture;
+    std::shared_ptr<sf::Texture> zombiesWonTexture;
+    std::shared_ptr<sf::Texture> potatoMineNotReadyTexture;
+    std::vector<std::shared_ptr<sf::Texture>> potatoMineExplosionFrames;
+    std::vector<std::shared_ptr<sf::Texture>> bulletFumeFrames;
     std::unordered_map<std::string, float> zombieAnimTimeById;
     std::unordered_map<std::string, int> zombieAnimFrameById;
     std::unordered_map<std::string, float> plantAnimTimeById;
     std::unordered_map<std::string, int> plantAnimFrameById;
+    bool gameLost = false;
 
     sf::Vector2u cachedViewSize = {1000u, 600u};
     float cachedScale = 1.f;

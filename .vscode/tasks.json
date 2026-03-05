@@ -1,0 +1,54 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "cppbuild",
+            "label": "C/C++: g++.exe (direct)",
+            "command": "C:\\work\\os\\mingw64\\bin\\g++.exe",
+            "args": [
+                "-fdiagnostics-color=always",
+                "-g",
+                "-m64",
+                "-D_GLIBCXX_USE_CXX11_ABI=0",
+                "-U_GLIBCXX_USE_CXX11_ABI",
+                "${workspaceFolder}\\src\\main.cpp",
+                "${workspaceFolder}\\src\\scene\\LevelSelectScene.cpp",
+                "${workspaceFolder}\\src\\scene\\LoadoutScene.cpp",
+                "${workspaceFolder}\\src\\scene\\PlantListScene.cpp",
+                "${workspaceFolder}\\src\\scene\\Level1Scene.cpp",
+                "${workspaceFolder}\\src\\battle\\StatsDatabase.cpp",
+                "${workspaceFolder}\\src\\battle\\BattleSimulator.cpp",
+                "${workspaceFolder}\\src\\battle\\PlantAttackSystem.cpp",
+                "-I",
+                "${workspaceFolder}\\src\\tool",
+                "-I",
+                "${workspaceFolder}\\src\\window",
+                "-I",
+                "${workspaceFolder}\\src\\scene",
+                "-I",
+                "${workspaceFolder}\\src\\battle",
+                "-I",
+                "${workspaceFolder}\\SFML2.6.2\\include",
+                "-L",
+                "${workspaceFolder}\\SFML2.6.2\\lib",
+                "-lsfml-graphics-d",
+                "-lsfml-window-d",
+                "-lsfml-system-d",
+                "-lgdiplus",
+                "-std=c++17",
+                "-static-libstdc++",
+                "-Wl,--disable-auto-import",
+                "-o",
+                "${workspaceFolder}\\bin\\debug\\main.exe"
+            ],
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "detail": "C:\\work\\os\\mingw64\\bin\\g++.exe direct build"
+        },
+            
+    ]
+}
