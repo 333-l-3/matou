@@ -6,8 +6,10 @@
                 "${workspaceFolder}/**",
                 "${workspaceFolder}/SFML2.6.2/include", // 只保留头文件目录
                 "${workspaceFolder}/src/window/",
-                "${workspaceFolder}/src/scene/"
-                
+                "${workspaceFolder}/src/scene/",
+                "${workspaceFolder}/src/battle/",
+                "${workspaceFolder}/src/entry",
+                "${workspaceFolder}/src/tool"
             ],
             "defines": [
                 "_DEBUG",

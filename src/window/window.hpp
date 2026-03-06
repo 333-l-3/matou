@@ -7,7 +7,7 @@
 #include "encodingtool.hpp"
 #include "file.hpp"
 #include "SceneManager.hpp"
-#include "../tool/ResourceManager.hpp"
+#include "ResourceManager.hpp"
 
 class GameWindow {
 private:
