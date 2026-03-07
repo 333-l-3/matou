@@ -14,6 +14,9 @@ void PlantAttackSystem::reset() {
     mineArmProgressByKey.clear();
     bulletsData.clear();
     mineExplosionsData.clear();
+    cherryExplosionsData.clear();
+    squashAttacksData.clear();
+    squashStrikesData.clear();
 }
 
 std::string PlantAttackSystem::plantKey(const PlantUnit& p) const {
@@ -43,6 +46,13 @@ void PlantAttackSystem::update(float dt,
                                const StatsDatabase& db,
                                const std::function<float(const PlantUnit&)>& getPlantFireX,
                                const std::function<void(int)>& addSun) {
+    std::vector<std::pair<int, float>> torchwoods;
+    torchwoods.reserve(plants.size());
+    for (const auto& p : plants) {
+        if (p.plantId != "torchwood") continue;
+        torchwoods.emplace_back(p.row, getPlantFireX(p));
+    }
+
     std::unordered_set<std::string> livePlantKeys;
     livePlantKeys.reserve(plants.size());
     for (const auto& p : plants) {
@@ -89,6 +99,12 @@ void PlantAttackSystem::update(float dt,
                         z.deathTimer = 0.f;
                     }
                 }
+                CherryExplosionEffect fx;
+                fx.row = p.row;
+                fx.x = cx;
+                fx.elapsed = 0.f;
+                fx.duration = 0.55f;
+                cherryExplosionsData.push_back(fx);
                 p.hp = 0;
                 cd = -999.f;
             }
@@ -187,6 +203,58 @@ void PlantAttackSystem::update(float dt,
             continue;
         }
 
+        if (p.plantId == "squash") {
+            std::string key = plantKey(p);
+            float& cd = cooldowns[key];
+            cd += dt;
+
+            float selfX = getPlantFireX(p);
+            PlantUnit probe = p;
+            const int targetCol = std::clamp(p.col + 1, 0, 8);
+            probe.col = targetCol;
+            const float targetX = getPlantFireX(probe);
+            probe.col = std::clamp(targetCol - 1, 0, 8);
+            const float prevX = getPlantFireX(probe);
+            probe.col = std::clamp(targetCol + 1, 0, 8);
+            const float nextX = getPlantFireX(probe);
+            const float leftBound = (prevX + targetX) * 0.5f;
+            const float rightBound = (targetX + nextX) * 0.5f;
+
+            bool hasTargetInFrontCell = false;
+            for (auto& z : zombies) {
+                if (z.dying || z.hp <= 0) continue;
+                if (z.row != p.row) continue;
+                if (z.x < leftBound || z.x > rightBound) continue;
+                hasTargetInFrontCell = true;
+                break;
+            }
+
+            constexpr float kWindup = 0.62f;
+            if (hasTargetInFrontCell && cd >= kWindup) {
+                SquashAttackEffect fx;
+                fx.row = p.row;
+                fx.startX = selfX;
+                fx.x = targetX;
+                fx.elapsed = 0.f;
+                fx.duration = 1.05f;
+                squashAttacksData.push_back(fx);
+
+                SquashStrikePending strike;
+                strike.row = p.row;
+                strike.centerX = targetX;
+                strike.halfWidth = std::max(20.f, (rightBound - leftBound) * 0.5f);
+                strike.damage = std::max(1, stats->attack);
+                strike.elapsed = 0.f;
+                strike.triggerTime = fx.duration * 0.92f;
+                strike.triggered = false;
+                squashStrikesData.push_back(strike);
+
+                p.hp = 0;
+                cd = -999.f;
+            }
+            continue;
+        }
+
         if (p.plantId == "chomper") {
             float fireX = getPlantFireX(p);
             ZombieUnit* target = nullptr;
@@ -250,6 +318,7 @@ void PlantAttackSystem::update(float dt,
             b1.sourcePlantId = p.plantId;
             b1.row = row;
             b1.x = fireX + 20.f;
+            b1.prevX = b1.x;
             b1.speed = (p.plantId == "snowpea") ? 240.f : 260.f;
             b1.damage = stats->attack;
             if (p.plantId == "fume") {
@@ -317,8 +386,27 @@ void PlantAttackSystem::update(float dt,
     }
 
     for (auto& b : bulletsData) {
+        b.prevX = b.x;
         b.x += b.speed * dt;
         if (b.life > 0.f) b.life -= dt;
+
+        const bool canTorch =
+            b.sourcePlantId == "peashooter" ||
+            b.sourcePlantId == "snowpea" ||
+            b.sourcePlantId == "repeater" ||
+            b.sourcePlantId == "wsdr" ||
+            b.sourcePlantId == "threepeater";
+        if (!canTorch || b.torchEnhanced) continue;
+
+        for (const auto& tw : torchwoods) {
+            if (tw.first != b.row) continue;
+            const float lo = std::min(b.prevX, b.x) - 6.f;
+            const float hi = std::max(b.prevX, b.x) + 6.f;
+            if (tw.second < lo || tw.second > hi) continue;
+            b.torchEnhanced = true;
+            b.damage = std::max(b.damage * 2, b.damage + 20);
+            break;
+        }
     }
 
     std::vector<BulletUnit> survivors;
@@ -336,7 +424,7 @@ void PlantAttackSystem::update(float dt,
             if (z.row != b.row) continue;
             if (std::fabs(z.x - b.x) <= 18.f) {
                 z.hp -= b.damage;
-                if (b.sourcePlantId == "snowpea") {
+                if (b.sourcePlantId == "snowpea" && !b.torchEnhanced) {
                     z.slowTimer = std::max(z.slowTimer, 2.5f);
                 }
                 if (z.hp <= 0) {
@@ -356,6 +444,30 @@ void PlantAttackSystem::update(float dt,
 
     bulletsData.swap(survivors);
 
+    for (auto& s : squashStrikesData) {
+        s.elapsed += dt;
+        if (s.triggered || s.elapsed < s.triggerTime) continue;
+        const float left = s.centerX - s.halfWidth;
+        const float right = s.centerX + s.halfWidth;
+        for (auto& z : zombies) {
+            if (z.dying || z.hp <= 0) continue;
+            if (z.row != s.row) continue;
+            if (z.x < left || z.x > right) continue;
+            z.hp -= s.damage;
+            if (z.hp <= 0) {
+                z.hp = 0;
+                z.dying = true;
+                z.deathTimer = 0.f;
+            }
+        }
+        s.triggered = true;
+    }
+    squashStrikesData.erase(
+        std::remove_if(squashStrikesData.begin(), squashStrikesData.end(),
+            [](const SquashStrikePending& s) { return s.elapsed >= s.triggerTime + 0.25f; }),
+        squashStrikesData.end()
+    );
+
     for (auto& fx : mineExplosionsData) {
         fx.elapsed += dt;
     }
@@ -363,6 +475,24 @@ void PlantAttackSystem::update(float dt,
         std::remove_if(mineExplosionsData.begin(), mineExplosionsData.end(),
             [](const MineExplosionEffect& fx) { return fx.elapsed >= fx.duration; }),
         mineExplosionsData.end()
+    );
+
+    for (auto& fx : cherryExplosionsData) {
+        fx.elapsed += dt;
+    }
+    cherryExplosionsData.erase(
+        std::remove_if(cherryExplosionsData.begin(), cherryExplosionsData.end(),
+            [](const CherryExplosionEffect& fx) { return fx.elapsed >= fx.duration; }),
+        cherryExplosionsData.end()
+    );
+
+    for (auto& fx : squashAttacksData) {
+        fx.elapsed += dt;
+    }
+    squashAttacksData.erase(
+        std::remove_if(squashAttacksData.begin(), squashAttacksData.end(),
+            [](const SquashAttackEffect& fx) { return fx.elapsed >= fx.duration; }),
+        squashAttacksData.end()
     );
 }
 

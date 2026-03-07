@@ -4,7 +4,7 @@
 #include "Scenes.hpp"
 #include "EncodingTool.hpp"
 #include "ResourceManager.hpp"
-#include "LevelContentRegistry.hpp"
+#include "PlantCardCatalog.hpp"
 #include "file.hpp"
 
 #include <SFML/Window.hpp>
@@ -24,7 +24,7 @@ void PlantListScene::onEnter() {
     titleText.setFillColor(sf::Color(30, 30, 35));
 
     cards.clear();
-    const auto& defs = matou::scene::levelcfg::allPlantCards();
+    const auto& defs = matou::scene::catalog::basePlantCards();
     cards.reserve(defs.size());
     for (const auto& def : defs) {
         cards.push_back({def.name, def.sunCost, def.imageRelPath, def.desc});
@@ -278,14 +278,22 @@ void PlantListScene::render(sf::RenderTarget& target) {
             sp.setTexture(*cardInfo->texture);
             auto tsz = cardInfo->texture->getSize();
             if (tsz.x > 0 && tsz.y > 0) {
+                int cropTop = 0;
+                if (cardInfo->imageRelPath.find("Squash") != std::string::npos) {
+                    cropTop = static_cast<int>(static_cast<float>(tsz.y) * 0.60f);
+                    cropTop = std::clamp(cropTop, 0, static_cast<int>(tsz.y) - 1);
+                    sp.setTextureRect(sf::IntRect(0, cropTop, static_cast<int>(tsz.x), static_cast<int>(tsz.y) - cropTop));
+                }
+                const float spriteW = static_cast<float>(tsz.x);
+                const float spriteH = static_cast<float>(static_cast<int>(tsz.y) - cropTop);
                 float maxW = r.width * 0.85f;
                 float maxH = (r.height - footerH) * 0.80f;
-                float sx = maxW / static_cast<float>(tsz.x);
-                float sy = maxH / static_cast<float>(tsz.y);
+                float sx = maxW / spriteW;
+                float sy = maxH / spriteH;
                 float s = std::min(sx, sy);
                 sp.setScale(s, s);
-                float imgW = tsz.x * s;
-                float imgH = tsz.y * s;
+                float imgW = spriteW * s;
+                float imgH = spriteH * s;
                 sp.setPosition(r.left + (r.width - imgW) * 0.5f, r.top + (r.height - footerH - imgH) * 0.18f);
                 target.draw(sp);
             }
@@ -294,9 +302,29 @@ void PlantListScene::render(sf::RenderTarget& target) {
         if (manager && manager->getSharedFont()) {
             sf::Text name;
             name.setFont(*manager->getSharedFont());
-            if (cardInfo) name.setString(GBKToSFString(cardInfo->name));
-            else name.setString(GBKToSFString("(Пе)"));
-            name.setCharacterSize(static_cast<unsigned int>(std::max(12.f, r.height * 0.12f)));
+            sf::String rawName;
+            if (cardInfo) rawName = GBKToSFString(cardInfo->name);
+            else rawName = GBKToSFString("(Пе)");
+            unsigned int charSize = static_cast<unsigned int>(std::max(12.f, r.height * 0.12f));
+            const unsigned int minSize = 9;
+            const sf::String ellipsis = GBKToSFString("...");
+            const float maxNameW = r.width - 20.f;
+
+            name.setCharacterSize(charSize);
+            name.setString(rawName);
+            while (charSize > minSize && name.getLocalBounds().width > maxNameW) {
+                --charSize;
+                name.setCharacterSize(charSize);
+            }
+            if (name.getLocalBounds().width > maxNameW) {
+                sf::String clipped = rawName;
+                while (clipped.getSize() > 0) {
+                    clipped.erase(clipped.getSize() - 1);
+                    name.setString(clipped + ellipsis);
+                    if (name.getLocalBounds().width <= maxNameW) break;
+                }
+            }
+
             name.setFillColor(sf::Color(60, 60, 70));
             auto nb = name.getLocalBounds();
             name.setPosition(r.left + 10.f, footerTop + 3.f - nb.top);

@@ -13,10 +13,12 @@ struct BulletUnit {
     std::string sourcePlantId;
     int row = 0;
     float x = 0.f;
+    float prevX = 0.f;
     float speed = 0.f;
     int damage = 0;
     float life = 4.0f;
     float maxLife = 4.0f;
+    bool torchEnhanced = false;
 };
 
 struct MineExplosionEffect {
@@ -24,6 +26,31 @@ struct MineExplosionEffect {
     float x = 0.f;
     float elapsed = 0.f;
     float duration = 0.45f;
+};
+
+struct CherryExplosionEffect {
+    int row = 0;
+    float x = 0.f;
+    float elapsed = 0.f;
+    float duration = 0.55f;
+};
+
+struct SquashAttackEffect {
+    int row = 0;
+    float startX = 0.f;
+    float x = 0.f;
+    float elapsed = 0.f;
+    float duration = 0.45f;
+};
+
+struct SquashStrikePending {
+    int row = 0;
+    float centerX = 0.f;
+    float halfWidth = 40.f;
+    int damage = 0;
+    float elapsed = 0.f;
+    float triggerTime = 0.75f;
+    bool triggered = false;
 };
 
 class PlantAttackSystem {
@@ -39,6 +66,8 @@ public:
 
     const std::vector<BulletUnit>& bullets() const { return bulletsData; }
     const std::vector<MineExplosionEffect>& mineExplosions() const { return mineExplosionsData; }
+    const std::vector<CherryExplosionEffect>& cherryExplosions() const { return cherryExplosionsData; }
+    const std::vector<SquashAttackEffect>& squashAttacks() const { return squashAttacksData; }
     bool isPotatoMineArmed(int row, int col) const;
     float potatoMineArmProgress(int row, int col) const;
 
@@ -58,6 +87,9 @@ private:
     std::unordered_map<std::string, float> mineArmProgressByKey;
     std::vector<BulletUnit> bulletsData;
     std::vector<MineExplosionEffect> mineExplosionsData;
+    std::vector<CherryExplosionEffect> cherryExplosionsData;
+    std::vector<SquashAttackEffect> squashAttacksData;
+    std::vector<SquashStrikePending> squashStrikesData;
 };
 
 } // namespace matou::battle

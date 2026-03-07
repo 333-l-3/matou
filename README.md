@@ -3,14 +3,14 @@
 C++17 tower-defense project built with SFML (PVZ style).
 
 ## Version
-- Current release: `v0.3`
-- Release date: `2026-03-05`
+- Current release: `v0.4`
+- Release date: `2026-03-07`
 - Repository: `https://github.com/333-l-3/matou.git`
 
-## v0.3 Highlights
-- Potato mine damage area changed to cross-shaped 5 tiles (self + up/down/left/right).
-- Build and runtime documentation expanded.
-- Cross-machine setup notes added (SFML runtime DLL + resource folder requirements).
+## v0.4 Highlights
+- Added `squash` and `torchwood` combat logic, with projectile enhancement and special attack effects.
+- Added sunflower sun pickups plus updated in-battle HUD rendering.
+- Refactored plant card data into `src/data/PlantCardCatalog.hpp` and refreshed menu / selection UI layouts.
 
 ## Requirements
 - OS: Windows 10/11 (x64)
@@ -40,7 +40,7 @@ C:\work\os\mingw64\bin\g++.exe `
   src\main.cpp `
   src\scene\LevelSelectScene.cpp src\scene\LoadoutScene.cpp src\scene\PlantListScene.cpp src\scene\Level1Scene.cpp `
   src\battle\StatsDatabase.cpp src\battle\BattleSimulator.cpp src\battle\PlantAttackSystem.cpp `
-  -I src\tool -I src\window -I src\scene -I src\battle -I SFML2.6.2\include `
+  -I src\tool -I src\window -I src\scene -I src\battle -I src\data -I SFML2.6.2\include `
   -L SFML2.6.2\lib -lsfml-graphics-d -lsfml-window-d -lsfml-system-d -lgdiplus `
   -std=c++17 -static-libstdc++ -Wl,--disable-auto-import `
   -o bin\debug\main.exe
@@ -58,6 +58,7 @@ matou/
 |   `-- debug/               # build outputs (main.exe / *.o)
 |-- src/
 |   |-- battle/              # simulator and attack logic
+|   |-- data/                # plant card / level config data
 |   |-- scene/               # scenes and level flow
 |   |-- tool/                # file/resource utilities
 |   |-- window/              # window and main loop wrapper

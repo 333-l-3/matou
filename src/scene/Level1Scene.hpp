@@ -2,9 +2,9 @@
 #define LEVEL1SCENE_HPP
 
 #include "Scene.hpp"
-#include "..\\battle\\BattleSimulator.hpp"
-#include "..\\battle\\PlantAttackSystem.hpp"
-#include "..\\battle\\WaveSpawnController.hpp"
+#include "BattleSimulator.hpp"
+#include "PlantAttackSystem.hpp"
+#include "WaveSpawnController.hpp"
 #include <SFML/Graphics.hpp>
 #include <memory>
 #include <string>
@@ -39,11 +39,30 @@ private:
         int col = 0;
     };
 
+    struct SunPickup {
+        int row = 0;
+        float worldX = 0.f;
+        float floatOffsetY = 0.f;
+        float life = 0.f;
+        int amount = 25;
+        bool collecting = false;
+        bool done = false;
+        float flyX = 0.f;
+        float flyY = 0.f;
+        float animTime = 0.f;
+        int animFrame = 0;
+    };
+
     void rebuildLayout(sf::Vector2u viewSize);
     bool findCellByPoint(const sf::Vector2f& p, int& outRow, int& outCol) const;
     int hitPlantCard(const sf::Vector2f& p) const;
+    int hitSunPickup(const sf::Vector2f& p) const;
     void clampOffset(float viewW, float imgW);
     PlacedPlant* findPlacedPlant(int row, int col);
+    void spawnSunPickupFromSunflower(int amount);
+    sf::Vector2f sunPickupScreenPos(const SunPickup& s) const;
+    void beginCollectSunPickup(SunPickup& s);
+    void updateSunPickups(float dt);
 
     SceneManager* manager;
     std::shared_ptr<sf::Texture> bgTexture;
@@ -73,11 +92,23 @@ private:
     std::shared_ptr<sf::Texture> bulletTexture;
     std::shared_ptr<sf::Texture> bulletSnowTexture;
     std::shared_ptr<sf::Texture> bulletShroomTexture;
+    std::shared_ptr<sf::Texture> bulletTorchTexture;
     std::shared_ptr<sf::Texture> bulletFumeTexture;
     std::shared_ptr<sf::Texture> zombiesWonTexture;
     std::shared_ptr<sf::Texture> potatoMineNotReadyTexture;
+    std::shared_ptr<sf::Texture> cherryBoomTexture;
+    std::shared_ptr<sf::Texture> squashAttackTexture;
+    std::shared_ptr<sf::Texture> sunBackTexture;
+    std::shared_ptr<sf::Texture> sunTexture;
     std::vector<std::shared_ptr<sf::Texture>> potatoMineExplosionFrames;
+    std::vector<std::shared_ptr<sf::Texture>> cherryBoomFrames;
+    std::vector<std::shared_ptr<sf::Texture>> squashAttackFrames;
     std::vector<std::shared_ptr<sf::Texture>> bulletFumeFrames;
+    std::vector<std::shared_ptr<sf::Texture>> bulletTorchFrames;
+    std::vector<std::shared_ptr<sf::Texture>> sunFrames;
+    std::vector<SunPickup> sunPickups;
+    sf::FloatRect sunHudRect;
+    int sunflowerSpawnCursor = 0;
     std::unordered_map<std::string, float> zombieAnimTimeById;
     std::unordered_map<std::string, int> zombieAnimFrameById;
     std::unordered_map<std::string, float> plantAnimTimeById;
@@ -99,8 +130,6 @@ private:
 };
 
 #endif
-
-
 
 
 

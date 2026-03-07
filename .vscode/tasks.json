@@ -28,6 +28,8 @@
                 "-I",
                 "${workspaceFolder}\\src\\battle",
                 "-I",
+                "${workspaceFolder}\\src\\data",
+                "-I",
                 "${workspaceFolder}\\SFML2.6.2\\include",
                 "-L",
                 "${workspaceFolder}\\SFML2.6.2\\lib",

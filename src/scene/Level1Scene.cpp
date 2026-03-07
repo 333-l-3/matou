@@ -6,6 +6,7 @@
 #include "EncodingTool.hpp"
 #include "ResourceManager.hpp"
 #include "LevelContentRegistry.hpp"
+#include "PlantCardCatalog.hpp"
 
 #include <SFML/Window.hpp>
 #include <algorithm>
@@ -102,6 +103,8 @@ void Level1Scene::onEnter() {
     attackSystem.reset();
     waveSpawnerEnabled = false;
     gameLost = false;
+    sunPickups.clear();
+    sunflowerSpawnCursor = 0;
 
     zombieAnimTimeById.clear();
     zombieAnimFrameById.clear();
@@ -113,7 +116,7 @@ void Level1Scene::onEnter() {
     plantAnimFrameById.clear();
     plantIdleFramesById.clear();
 
-    const auto& cardDefs = matou::scene::levelcfg::allPlantCards();
+    const auto& cardDefs = matou::scene::catalog::basePlantCards();
     std::vector<PlantOption> all;
     all.reserve(cardDefs.size());
     for (const auto& def : cardDefs) {
@@ -288,6 +291,19 @@ void Level1Scene::onEnter() {
         bulletShroomTexture = rm->getTexture(matou::tool::file::resourcePath("res\\images\\Plants\\ScaredyShroom\\ShroomBullet.gif"));
         if (!bulletShroomTexture) bulletShroomTexture = rm->getTexture(matou::tool::file::resourcePath("res\\images\\Plants\\ShroomBullet.gif"));
         if (bulletShroomTexture) bulletShroomTexture->setSmooth(false);
+        bulletTorchTexture = rm->getTexture(matou::tool::file::resourcePath("res\\images\\Plants\\PB10.gif"));
+        if (bulletTorchTexture) bulletTorchTexture->setSmooth(false);
+        bulletTorchFrames.clear();
+        const std::string torchBulletPath = matou::tool::file::resourcePath("res\\images\\Plants\\PB10.gif");
+        auto torchBulletAnim = rm->getGifAnimation(torchBulletPath);
+        if (torchBulletAnim && !torchBulletAnim->frames.empty()) {
+            bulletTorchFrames.reserve(torchBulletAnim->frames.size());
+            for (auto& f : torchBulletAnim->frames) {
+                if (!f) continue;
+                f->setSmooth(false);
+                bulletTorchFrames.push_back(f);
+            }
+        }
         bulletFumeFrames.clear();
         const std::string fumeBulletPath = matou::tool::file::resourcePath("res\\images\\Plants\\FumeShroom\\FumeShroomBullet.gif");
         auto fumeAnim = rm->getGifAnimation(fumeBulletPath);
@@ -325,6 +341,59 @@ void Level1Scene::onEnter() {
                 potatoMineExplosionFrames.push_back(mineExplosionTex);
             }
         }
+
+        cherryBoomFrames.clear();
+        const std::string cherryBoomPath = matou::tool::file::resourcePath("res\\images\\Plants\\CherryBomb\\Boom.gif");
+        auto cherryBoomAnim = rm->getGifAnimation(cherryBoomPath);
+        if (cherryBoomAnim && !cherryBoomAnim->frames.empty()) {
+            cherryBoomFrames.reserve(cherryBoomAnim->frames.size());
+            for (auto& f : cherryBoomAnim->frames) {
+                if (!f) continue;
+                f->setSmooth(false);
+                cherryBoomFrames.push_back(f);
+            }
+        }
+        cherryBoomTexture = rm->getTexture(cherryBoomPath);
+        if (cherryBoomTexture) cherryBoomTexture->setSmooth(false);
+        if (cherryBoomFrames.empty() && cherryBoomTexture) {
+            cherryBoomFrames.push_back(cherryBoomTexture);
+        }
+
+        squashAttackFrames.clear();
+        const std::string squashAttackPath = matou::tool::file::resourcePath("res\\images\\Plants\\Squash\\SquashAttack.gif");
+        auto squashAttackAnim = rm->getGifAnimation(squashAttackPath);
+        if (squashAttackAnim && !squashAttackAnim->frames.empty()) {
+            squashAttackFrames.reserve(squashAttackAnim->frames.size());
+            for (auto& f : squashAttackAnim->frames) {
+                if (!f) continue;
+                f->setSmooth(false);
+                squashAttackFrames.push_back(f);
+            }
+        }
+        squashAttackTexture = rm->getTexture(squashAttackPath);
+        if (squashAttackTexture) squashAttackTexture->setSmooth(false);
+        if (squashAttackFrames.empty() && squashAttackTexture) {
+            squashAttackFrames.push_back(squashAttackTexture);
+        }
+        sunBackTexture = rm->getTexture(matou::tool::file::resourcePath("res\\images\\interface\\SunBack.png"));
+        if (sunBackTexture) sunBackTexture->setSmooth(false);
+
+        sunFrames.clear();
+        const std::string sunGifPath = matou::tool::file::resourcePath("res\\images\\interface\\Sun.gif");
+        auto sunAnim = rm->getGifAnimation(sunGifPath);
+        if (sunAnim && !sunAnim->frames.empty()) {
+            sunFrames.reserve(sunAnim->frames.size());
+            for (auto& f : sunAnim->frames) {
+                if (!f) continue;
+                f->setSmooth(false);
+                sunFrames.push_back(f);
+            }
+        }
+        sunTexture = rm->getTexture(sunGifPath);
+        if (sunTexture) sunTexture->setSmooth(false);
+        if (sunFrames.empty() && sunTexture) {
+            sunFrames.push_back(sunTexture);
+        }
     }
 
     rebuildLayout(cachedViewSize);
@@ -340,6 +409,16 @@ void Level1Scene::update(float dt) {
         waveSpawner.update(dt, battleSim, lawnRows);
     }
 
+    {
+        float hudH = 42.f;
+        float hudW = 120.f;
+        if (sunBackTexture && sunBackTexture->getSize().x > 0 && sunBackTexture->getSize().y > 0) {
+            const auto tsz = sunBackTexture->getSize();
+            hudW = static_cast<float>(tsz.x) * (hudH / static_cast<float>(tsz.y));
+        }
+        sunHudRect = sf::FloatRect(static_cast<float>(cachedViewSize.x) - hudW - 14.f, 10.f, hudW, hudH);
+    }
+
     attackSystem.update(
         dt,
         battleSim.plantsMutable(),
@@ -353,9 +432,10 @@ void Level1Scene::update(float dt) {
             return (left + right) * 0.5f;
      },
         [this](int sun) {
-            battleSim.addSun(sun);
+            spawnSunPickupFromSunflower(sun);
      }
     );
+    updateSunPickups(dt);
 
     for (const auto& pair : zombieWalkFramesById) {
         const std::string& zid = pair.first;
@@ -459,6 +539,16 @@ void Level1Scene::render(sf::RenderTarget& target) {
 
     float viewW = static_cast<float>(target.getSize().x);
 
+    {
+        float hudH = 42.f;
+        float hudW = 120.f;
+        if (sunBackTexture && sunBackTexture->getSize().x > 0 && sunBackTexture->getSize().y > 0) {
+            const auto tsz = sunBackTexture->getSize();
+            hudW = static_cast<float>(tsz.x) * (hudH / static_cast<float>(tsz.y));
+        }
+        sunHudRect = sf::FloatRect(static_cast<float>(target.getSize().x) - hudW - 14.f, 10.f, hudW, hudH);
+    }
+
     clampOffset(kBaseW, cachedImageWidth);
     bgSprite.setScale(cachedScale, cachedScale);
     bgSprite.setPosition(-viewOffsetX, 0.f);
@@ -518,6 +608,15 @@ void Level1Scene::render(sf::RenderTarget& target) {
         const auto tsz = ptex->getSize();
         if (tsz.x == 0 || tsz.y == 0) continue;
 
+        int cropTop = 0;
+        if (option.id == "squash") {
+            cropTop = static_cast<int>(static_cast<float>(tsz.y) * 0.60f);
+            cropTop = std::clamp(cropTop, 0, static_cast<int>(tsz.y) - 1);
+            sp.setTextureRect(sf::IntRect(0, cropTop, static_cast<int>(tsz.x), static_cast<int>(tsz.y) - cropTop));
+        }
+        const float spriteW = static_cast<float>(tsz.x);
+        const float spriteH = static_cast<float>(static_cast<int>(tsz.y) - cropTop);
+
         float topW = lengthOf(tr - tl);
         float bottomW = lengthOf(br - bl);
         float leftH = lengthOf(bl - tl);
@@ -527,13 +626,13 @@ void Level1Scene::render(sf::RenderTarget& target) {
 
         float maxW = cellW * 0.78f;
         float maxH = cellH * 0.82f;
-        float sx = maxW / static_cast<float>(tsz.x);
-        float sy = maxH / static_cast<float>(tsz.y);
+        float sx = maxW / spriteW;
+        float sy = maxH / spriteH;
         float s = std::min(sx, sy);
         sp.setScale(s, s);
 
-        float w = static_cast<float>(tsz.x) * s;
-        float h = static_cast<float>(tsz.y) * s;
+        float w = spriteW * s;
+        float h = spriteH * s;
         sf::Vector2f bottomCenter = (bl + br) * 0.5f;
         sp.setPosition(bottomCenter.x - w * 0.5f, bottomCenter.y - h);
         if (isPotatoMine && potatoMineNotReadyTexture) {
@@ -657,6 +756,160 @@ void Level1Scene::render(sf::RenderTarget& target) {
      }
     }
 
+    // ”£Ã“’®µØ±¨’®Ãÿ–ß
+    for (const auto& fx : attackSystem.cherryExplosions()) {
+        if (fx.row < 0 || fx.row >= lawnRows) continue;
+
+        const sf::Vector2f& leftTop = gridPoints[static_cast<size_t>(fx.row * kPointCols)];
+        const sf::Vector2f& rightTop = gridPoints[static_cast<size_t>(fx.row * kPointCols + (kPointCols - 1))];
+        const sf::Vector2f& leftBottom = gridPoints[static_cast<size_t>((fx.row + 1) * kPointCols)];
+        const sf::Vector2f& rightBottom = gridPoints[static_cast<size_t>((fx.row + 1) * kPointCols + (kPointCols - 1))];
+
+        float worldLeft = kBaseGrid[static_cast<size_t>(fx.row + 1)][0].x;
+        float worldRight = kBaseGrid[static_cast<size_t>(fx.row + 1)][kPointCols - 1].x;
+        float trow = (worldRight - worldLeft) == 0.f ? 0.5f : (fx.x - worldLeft) / (worldRight - worldLeft);
+        trow = std::clamp(trow, 0.f, 1.f);
+
+        float sx = fx.x - viewOffsetX;
+        float footY = leftBottom.y + (rightBottom.y - leftBottom.y) * trow;
+        float rowH = std::fabs((leftBottom.y + rightBottom.y) * 0.5f - (leftTop.y + rightTop.y) * 0.5f);
+        float targetH = rowH * 2.3f;
+
+        if (!cherryBoomFrames.empty()) {
+            float ratio = fx.duration > 0.f ? std::clamp(fx.elapsed / fx.duration, 0.f, 1.f) : 1.f;
+            int fidx = std::clamp(static_cast<int>(ratio * static_cast<float>(cherryBoomFrames.size())), 0, static_cast<int>(cherryBoomFrames.size()) - 1);
+            auto tex = cherryBoomFrames[static_cast<size_t>(fidx)];
+            if (!tex) continue;
+
+            sf::Sprite es;
+            es.setTexture(*tex);
+            auto tsz = tex->getSize();
+            if (tsz.x == 0 || tsz.y == 0) continue;
+
+            float s = targetH / static_cast<float>(tsz.y);
+            es.setScale(s, s);
+            float w = static_cast<float>(tsz.x) * s;
+            float h = static_cast<float>(tsz.y) * s;
+            es.setPosition(sx - w * 0.5f, footY - h * 0.72f);
+            target.draw(es);
+        } else {
+            sf::CircleShape c(std::max(22.f, lawnCellH * 0.48f));
+            c.setOrigin(c.getRadius(), c.getRadius());
+            c.setPosition(sx, footY - lawnCellH * 0.50f);
+            c.setFillColor(sf::Color(255, 110, 70, 170));
+            target.draw(c);
+        }
+    }
+
+
+    // Ÿ¡πœ—π…±Ãÿ–ß
+    for (const auto& fx : attackSystem.squashAttacks()) {
+        if (fx.row < 0 || fx.row >= lawnRows) continue;
+
+        const sf::Vector2f& leftTop = gridPoints[static_cast<size_t>(fx.row * kPointCols)];
+        const sf::Vector2f& rightTop = gridPoints[static_cast<size_t>(fx.row * kPointCols + (kPointCols - 1))];
+        const sf::Vector2f& leftBottom = gridPoints[static_cast<size_t>((fx.row + 1) * kPointCols)];
+        const sf::Vector2f& rightBottom = gridPoints[static_cast<size_t>((fx.row + 1) * kPointCols + (kPointCols - 1))];
+
+        float worldLeft = kBaseGrid[static_cast<size_t>(fx.row + 1)][0].x;
+        float worldRight = kBaseGrid[static_cast<size_t>(fx.row + 1)][kPointCols - 1].x;
+        float rowH = std::fabs((leftBottom.y + rightBottom.y) * 0.5f - (leftTop.y + rightTop.y) * 0.5f);
+        float targetH = rowH * 1.7f;
+
+        const float ratio = fx.duration > 0.f ? std::clamp(fx.elapsed / fx.duration, 0.f, 1.f) : 1.f;
+        const float holdRatio = 0.20f;
+        const float travelEndRatio = 0.54f;
+        const float dropStartRatio = 0.76f;
+        const float landingHoldRatio = 0.08f;
+        const float dropEndRatio = 1.f - landingHoldRatio;
+
+        float worldX = fx.startX;
+        if (ratio > holdRatio && ratio < travelEndRatio) {
+            float p = (ratio - holdRatio) / (travelEndRatio - holdRatio);
+            float eased = 1.f - (1.f - p) * (1.f - p);
+            worldX = fx.startX + (fx.x - fx.startX) * eased;
+        } else if (ratio >= travelEndRatio) {
+            worldX = fx.x;
+        }
+
+        float trow = (worldRight - worldLeft) == 0.f ? 0.5f : (worldX - worldLeft) / (worldRight - worldLeft);
+        trow = std::clamp(trow, 0.f, 1.f);
+        float sx = worldX - viewOffsetX;
+        float footY = leftBottom.y + (rightBottom.y - leftBottom.y) * trow;
+
+        float hoverLift = rowH * 0.76f;
+        if (ratio < holdRatio) {
+            float p = (holdRatio <= 0.f) ? 1.f : (ratio / holdRatio);
+            hoverLift = rowH * (0.06f + 0.12f * p);
+        } else if (ratio < travelEndRatio) {
+            float p = (ratio - holdRatio) / (travelEndRatio - holdRatio);
+            hoverLift = rowH * (0.22f + 0.56f * std::sin(p * 3.1415926f * 0.5f));
+        }
+
+        if (!squashAttackFrames.empty()) {
+            int refW = 0;
+            int refH = 0;
+            for (const auto& fr : squashAttackFrames) {
+                if (!fr) continue;
+                auto fsz = fr->getSize();
+                refW = std::max(refW, static_cast<int>(fsz.x));
+                refH = std::max(refH, static_cast<int>(fsz.y));
+            }
+
+            float dropP = 0.f;
+            if (ratio >= dropStartRatio) {
+                dropP = (1.f - dropStartRatio) <= 0.f ? 1.f : (ratio - dropStartRatio) / (1.f - dropStartRatio);
+                dropP = std::clamp(dropP, 0.f, 1.f);
+            }
+            int fidx = static_cast<int>(dropP * static_cast<float>(squashAttackFrames.size() - 1));
+            fidx = std::clamp(fidx, 0, static_cast<int>(squashAttackFrames.size()) - 1);
+            auto tex = squashAttackFrames[static_cast<size_t>(fidx)];
+            if (!tex || refW <= 0 || refH <= 0) continue;
+
+            sf::Sprite es;
+            es.setTexture(*tex);
+            auto tsz = tex->getSize();
+            if (tsz.x == 0 || tsz.y == 0) continue;
+
+            float drawH = targetH;
+            float drawW = static_cast<float>(refW) * (drawH / static_cast<float>(refH));
+            float sxScale = drawW / static_cast<float>(tsz.x);
+            float syScale = drawH / static_cast<float>(tsz.y);
+            es.setScale(sxScale, syScale);
+
+            const float yGround = footY - drawH * 0.78f;
+            float y = yGround;
+            if (ratio < dropStartRatio) {
+                y = yGround - hoverLift;
+            } else {
+                float p = (dropEndRatio - dropStartRatio) <= 0.f ? 1.f : (ratio - dropStartRatio) / (dropEndRatio - dropStartRatio);
+                p = std::clamp(p, 0.f, 1.f);
+                float accel = p * p;
+                y = yGround - hoverLift * (1.f - accel);
+            }
+            y = std::min(y, yGround);
+
+            es.setPosition(sx - drawW * 0.5f, y);
+            target.draw(es);
+        } else {
+            sf::CircleShape c(std::max(18.f, lawnCellH * 0.40f));
+            c.setOrigin(c.getRadius(), c.getRadius());
+            const float yGround = footY - lawnCellH * 0.45f;
+            float y = yGround;
+            if (ratio < dropStartRatio) {
+                y = yGround - hoverLift;
+            } else {
+                float p = (dropEndRatio - dropStartRatio) <= 0.f ? 1.f : (ratio - dropStartRatio) / (dropEndRatio - dropStartRatio);
+                p = std::clamp(p, 0.f, 1.f);
+                float accel = p * p;
+                y = yGround - hoverLift * (1.f - accel);
+            }
+            y = std::min(y, yGround);
+            c.setPosition(sx, y);
+            c.setFillColor(sf::Color(190, 255, 145, 170));
+            target.draw(c);
+        }
+    }
     // ∂Øª≠Ω© ¨£®––◊ﬂ/À¿Õˆ£©
     for (const auto& z : battleSim.zombies()) {
         std::shared_ptr<sf::Texture> ztex;
@@ -827,7 +1080,16 @@ void Level1Scene::render(sf::RenderTarget& target) {
 
         std::shared_ptr<sf::Texture> btex = bulletTexture;
         float bulletSize = 24.f;
-        if (b.sourcePlantId == "snowpea" && bulletSnowTexture) {
+        if (b.torchEnhanced) {
+            if (!bulletTorchFrames.empty()) {
+                int tidx = static_cast<int>((b.x + static_cast<float>(b.row) * 23.f) / 9.f);
+                tidx = ((tidx % static_cast<int>(bulletTorchFrames.size())) + static_cast<int>(bulletTorchFrames.size())) % static_cast<int>(bulletTorchFrames.size());
+                btex = bulletTorchFrames[static_cast<size_t>(tidx)];
+            } else if (bulletTorchTexture) {
+                btex = bulletTorchTexture;
+            }
+            bulletSize = 30.f;
+        } else if (b.sourcePlantId == "snowpea" && bulletSnowTexture) {
             btex = bulletSnowTexture;
             bulletSize = 28.f;
      } else if (b.sourcePlantId == "scaredyshroom" && bulletShroomTexture) {
@@ -855,10 +1117,36 @@ void Level1Scene::render(sf::RenderTarget& target) {
                 float w = tsz.x * s;
                 float h = tsz.y * s;
                 bs.setPosition(sx - w * 0.5f, y - h * 0.5f);
-                if (b.sourcePlantId == "repeater" || b.sourcePlantId == "wsdr") bs.setColor(sf::Color(180, 255, 180));
+                if (b.torchEnhanced) bs.setColor(sf::Color(255, 200, 130));
+                else if (b.sourcePlantId == "repeater" || b.sourcePlantId == "wsdr") bs.setColor(sf::Color(180, 255, 180));
                 target.draw(bs);
          }
      }
+    }
+
+
+    // —Ùπ‚µÙ¬‰”Î ’ºØ∂Øª≠
+    for (const auto& s : sunPickups) {
+        sf::Vector2f pos = sunPickupScreenPos(s);
+        std::shared_ptr<sf::Texture> stex;
+        if (!sunFrames.empty()) {
+            int idx = std::clamp(s.animFrame, 0, static_cast<int>(sunFrames.size()) - 1);
+            stex = sunFrames[static_cast<size_t>(idx)];
+        } else {
+            stex = sunTexture;
+        }
+        if (!stex || stex->getSize().x == 0 || stex->getSize().y == 0) continue;
+
+        sf::Sprite ss;
+        ss.setTexture(*stex);
+        auto tsz = stex->getSize();
+        const float sunSize = 70.f;
+        float scale = sunSize / static_cast<float>(std::max(tsz.x, tsz.y));
+        ss.setScale(scale, scale);
+        float w = static_cast<float>(tsz.x) * scale;
+        float h = static_cast<float>(tsz.y) * scale;
+        ss.setPosition(pos.x - w * 0.5f, pos.y - h * 0.5f);
+        target.draw(ss);
     }
 
     // ◊Û≤‡ ˙¡–ø®¿∏
@@ -888,14 +1176,31 @@ void Level1Scene::render(sf::RenderTarget& target) {
             sp.setTexture(*plantOptions[i].texture);
             auto tsz = plantOptions[i].texture->getSize();
             if (tsz.x > 0 && tsz.y > 0) {
-                float maxW = r.width * 0.62f;
+                int cropTop = 0;
+                if (plantOptions[i].id == "squash") {
+                    cropTop = static_cast<int>(static_cast<float>(tsz.y) * 0.60f);
+                    cropTop = std::clamp(cropTop, 0, static_cast<int>(tsz.y) - 1);
+                    sp.setTextureRect(sf::IntRect(0, cropTop, static_cast<int>(tsz.x), static_cast<int>(tsz.y) - cropTop));
+                }
+                const float spriteW = static_cast<float>(tsz.x);
+                const float spriteH = static_cast<float>(static_cast<int>(tsz.y) - cropTop);
+
+                const float imageAreaW = r.width * 0.36f;
+                float maxW = imageAreaW;
                 float maxH = r.height * 0.70f;
-                float sx = maxW / static_cast<float>(tsz.x);
-                float sy = maxH / static_cast<float>(tsz.y);
+                if (plantOptions[i].id == "squash") {
+                    maxW = r.width * 0.40f;
+                    maxH = r.height * 0.86f;
+                }
+                float sx = maxW / spriteW;
+                float sy = maxH / spriteH;
                 float s = std::min(sx, sy);
                 sp.setScale(s, s);
-                float h = static_cast<float>(tsz.y) * s;
-                sp.setPosition(r.left + 6.f, r.top + (r.height - h) * 0.5f);
+                float w = spriteW * s;
+                float h = spriteH * s;
+                float iconLeft = r.left + 4.f;
+                if (plantOptions[i].id == "squash") iconLeft = r.left + 2.f;
+                sp.setPosition(iconLeft + (imageAreaW - w) * 0.5f, r.top + (r.height - h) * 0.5f);
                 target.draw(sp);
          }
      }
@@ -903,11 +1208,31 @@ void Level1Scene::render(sf::RenderTarget& target) {
         if (manager && manager->getSharedFont()) {
             sf::Text name;
             name.setFont(*manager->getSharedFont());
-            name.setString(GBKToSFString(plantOptions[i].name));
-            name.setCharacterSize(11);
+            const sf::String rawName = GBKToSFString(plantOptions[i].name);
+            unsigned int charSize = 11;
+            const unsigned int minSize = 8;
+            const sf::String ellipsis = GBKToSFString("...");
+            const float textLeft = r.left + r.width * 0.40f;
+            const float maxNameW = r.left + r.width - 6.f - textLeft;
+
+            name.setCharacterSize(charSize);
+            name.setString(rawName);
+            while (charSize > minSize && name.getLocalBounds().width > maxNameW) {
+                --charSize;
+                name.setCharacterSize(charSize);
+            }
+            if (name.getLocalBounds().width > maxNameW) {
+                sf::String clipped = rawName;
+                while (clipped.getSize() > 0) {
+                    clipped.erase(clipped.getSize() - 1);
+                    name.setString(clipped + ellipsis);
+                    if (name.getLocalBounds().width <= maxNameW) break;
+                }
+            }
+
             name.setFillColor(sf::Color(45, 45, 55));
             auto b = name.getLocalBounds();
-            name.setPosition(r.left + r.width * 0.38f - b.left, r.top + (r.height - b.height) * 0.5f - b.top);
+            name.setPosition(textLeft - b.left, r.top + (r.height - b.height) * 0.5f - b.top);
             target.draw(name);
      }
     }
@@ -939,15 +1264,52 @@ void Level1Scene::render(sf::RenderTarget& target) {
      }
     }
 
-    sf::Text info;
-    if (manager && manager->getSharedFont()) info.setFont(*manager->getSharedFont());
-    info.setString(GBKToSFString("∫Æ±˘ºıÀŸ/À´∑¢¡¨…‰/”£Ã“±¨’®/Ω© ¨À¿Õˆ∂Øª≠“—Ω”»Î"));
-    info.setCharacterSize(12);
-    info.setFillColor(sf::Color(200, 200, 200));
-    auto ib = info.getLocalBounds();
-    float ipadding = 12.f;
-    info.setPosition(viewW - ib.width - ipadding - ib.left, 10.f - ib.top);
-    target.draw(info);
+    // ”“…œΩ«—Ùπ‚œ‘ æ«¯
+    if (sunBackTexture && sunBackTexture->getSize().x > 0 && sunBackTexture->getSize().y > 0) {
+        sf::Sprite hud;
+        hud.setTexture(*sunBackTexture);
+        const auto tsz = sunBackTexture->getSize();
+        hud.setScale(sunHudRect.width / static_cast<float>(tsz.x), sunHudRect.height / static_cast<float>(tsz.y));
+        hud.setPosition(sunHudRect.left, sunHudRect.top);
+        target.draw(hud);
+    } else {
+        sf::RectangleShape hud({sunHudRect.width, sunHudRect.height});
+        hud.setPosition(sunHudRect.left, sunHudRect.top);
+        hud.setFillColor(sf::Color(245, 220, 120, 180));
+        hud.setOutlineThickness(1.f);
+        hud.setOutlineColor(sf::Color(180, 140, 40, 220));
+        target.draw(hud);
+    }
+
+    if (!sunFrames.empty() || sunTexture) {
+        std::shared_ptr<sf::Texture> iconTex = !sunFrames.empty() ? sunFrames.front() : sunTexture;
+        if (iconTex && iconTex->getSize().x > 0 && iconTex->getSize().y > 0) {
+            sf::Sprite icon;
+            icon.setTexture(*iconTex);
+            auto tsz = iconTex->getSize();
+            const float iconSize = sunHudRect.height * 0.20f;
+            float s = iconSize / static_cast<float>(std::max(tsz.x, tsz.y));
+            icon.setScale(s, s);
+            float w = static_cast<float>(tsz.x) * s;
+            float h = static_cast<float>(tsz.y) * s;
+            icon.setPosition(sunHudRect.left + 10.f, sunHudRect.top + (sunHudRect.height - h) * 0.5f);
+            target.draw(icon);
+        }
+    }
+
+    if (manager && manager->getSharedFont()) {
+        sf::Text sunText;
+        sunText.setFont(*manager->getSharedFont());
+        sunText.setCharacterSize(16);
+        sunText.setFillColor(sf::Color(80, 55, 10));
+        sunText.setString(std::to_string(battleSim.sun()));
+        auto sb = sunText.getLocalBounds();
+        sunText.setPosition(
+            sunHudRect.left + sunHudRect.width * 0.56f - sb.width * 0.5f - sb.left,
+            sunHudRect.top + (sunHudRect.height - sb.height) * 0.5f - sb.top
+        );
+        target.draw(sunText);
+    }
 
     if (gameLost) {
         sf::RectangleShape mask(sf::Vector2f(viewW, static_cast<float>(target.getSize().y)));
@@ -984,6 +1346,115 @@ void Level1Scene::render(sf::RenderTarget& target) {
             target.draw(hint);
      }
     }
+}
+
+
+int Level1Scene::hitSunPickup(const sf::Vector2f& p) const {
+    for (int i = static_cast<int>(sunPickups.size()) - 1; i >= 0; --i) {
+        const sf::Vector2f pos = sunPickupScreenPos(sunPickups[static_cast<size_t>(i)]);
+        const float dx = p.x - pos.x;
+        const float dy = p.y - pos.y;
+        if (dx * dx + dy * dy <= 26.f * 26.f) return i;
+    }
+    return -1;
+}
+
+sf::Vector2f Level1Scene::sunPickupScreenPos(const SunPickup& s) const {
+    if (s.collecting) return {s.flyX, s.flyY};
+
+    const int r = std::clamp(s.row, 0, lawnRows - 1);
+    if (gridPoints.size() < static_cast<size_t>(kPointRows * kPointCols)) {
+        return {s.worldX - viewOffsetX, 120.f + s.floatOffsetY};
+    }
+
+    const sf::Vector2f& topL = gridPoints[static_cast<size_t>(r * kPointCols)];
+    const sf::Vector2f& topR = gridPoints[static_cast<size_t>(r * kPointCols + (kPointCols - 1))];
+    const sf::Vector2f& bottomL = gridPoints[static_cast<size_t>((r + 1) * kPointCols)];
+    const sf::Vector2f& bottomR = gridPoints[static_cast<size_t>((r + 1) * kPointCols + (kPointCols - 1))];
+
+    float worldLeft = kBaseGrid[static_cast<size_t>(r + 1)][0].x;
+    float worldRight = kBaseGrid[static_cast<size_t>(r + 1)][kPointCols - 1].x;
+    float t = (worldRight - worldLeft) == 0.f ? 0.5f : (s.worldX - worldLeft) / (worldRight - worldLeft);
+    t = std::clamp(t, 0.f, 1.f);
+
+    float sx = s.worldX - viewOffsetX;
+    float topY = topL.y + (topR.y - topL.y) * t;
+    float bottomY = bottomL.y + (bottomR.y - bottomL.y) * t;
+    float y = (topY + bottomY) * 0.5f + s.floatOffsetY;
+    return {sx, y};
+}
+
+void Level1Scene::beginCollectSunPickup(SunPickup& s) {
+    if (s.collecting || s.done) return;
+    const sf::Vector2f pos = sunPickupScreenPos(s);
+    s.collecting = true;
+    s.flyX = pos.x;
+    s.flyY = pos.y;
+}
+
+void Level1Scene::spawnSunPickupFromSunflower(int amount) {
+    std::vector<const matou::battle::PlantUnit*> suns;
+    for (const auto& p : battleSim.plants()) {
+        if (p.plantId == "sunflower") suns.push_back(&p);
+    }
+    if (suns.empty()) {
+        battleSim.addSun(amount);
+        return;
+    }
+
+    const size_t pick = static_cast<size_t>(sunflowerSpawnCursor++) % suns.size();
+    const auto* src = suns[pick];
+    const int r = std::clamp(src->row, 0, lawnRows - 1);
+    const int c = std::clamp(src->col, 0, lawnCols - 1);
+    float left = kBaseGrid[static_cast<size_t>(r + 1)][static_cast<size_t>(c)].x;
+    float right = kBaseGrid[static_cast<size_t>(r + 1)][static_cast<size_t>(c + 1)].x;
+
+    SunPickup s;
+    s.row = r;
+    s.worldX = (left + right) * 0.5f;
+    s.floatOffsetY = -18.f;
+    s.life = 0.f;
+    s.amount = amount;
+    sunPickups.push_back(s);
+}
+
+void Level1Scene::updateSunPickups(float dt) {
+    const float targetX = sunHudRect.left + sunHudRect.width * 0.55f;
+    const float targetY = sunHudRect.top + sunHudRect.height * 0.50f;
+
+    for (auto& s : sunPickups) {
+        s.animTime += dt;
+        if (!sunFrames.empty()) {
+            while (s.animTime >= 0.08f) {
+                s.animTime -= 0.08f;
+                s.animFrame = (s.animFrame + 1) % static_cast<int>(sunFrames.size());
+            }
+        }
+
+        if (!s.collecting) {
+            s.life += dt;
+            s.floatOffsetY -= 6.f * dt;
+            if (s.life >= 5.f) beginCollectSunPickup(s);
+            continue;
+        }
+
+        const float dx = targetX - s.flyX;
+        const float dy = targetY - s.flyY;
+        const float dist = std::sqrt(dx * dx + dy * dy);
+        const float speed = 540.f;
+        if (dist <= std::max(6.f, speed * dt)) {
+            s.done = true;
+            battleSim.addSun(s.amount);
+            continue;
+        }
+        s.flyX += dx / dist * speed * dt;
+        s.flyY += dy / dist * speed * dt;
+    }
+
+    sunPickups.erase(
+        std::remove_if(sunPickups.begin(), sunPickups.end(), [](const SunPickup& s) { return s.done; }),
+        sunPickups.end()
+    );
 }
 
 bool Level1Scene::usesWindowBackground() const {
@@ -1117,6 +1588,13 @@ void Level1Scene::handleEvent(const sf::Event& event) {
     if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
         sf::Vector2f p(static_cast<float>(event.mouseButton.x), static_cast<float>(event.mouseButton.y));
         dragMousePos = p;
+
+        int sunHit = hitSunPickup(p);
+        if (sunHit >= 0 && sunHit < static_cast<int>(sunPickups.size())) {
+            beginCollectSunPickup(sunPickups[static_cast<size_t>(sunHit)]);
+            return;
+        }
+
         int hit = hitPlantCard(p);
         if (hit >= 0) {
             draggingPlant = true;
